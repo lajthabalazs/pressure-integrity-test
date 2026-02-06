@@ -1,0 +1,29 @@
+package ca.lajthabalazs.pressure_integrity_test.ui.view;
+
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+
+public class MainWindow extends JFrame {
+
+  public MainWindow() {
+    setTitle("Pressure Integrity Test");
+    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    setSize(800, 600);
+    setLocationRelativeTo(null);
+
+    JMenuBar menuBar = new JMenuBar();
+    JMenu testMenu = new JMenu("Test");
+    JMenuItem startNewTestItem = new JMenuItem("Start new test");
+    startNewTestItem.addActionListener(e -> onStartNewTest());
+    testMenu.add(startNewTestItem);
+    menuBar.add(testMenu);
+    setJMenuBar(menuBar);
+  }
+
+  private void onStartNewTest() {
+    NewTestWizardDialog dialog = new NewTestWizardDialog(this);
+    dialog.setVisible(true);
+  }
+}

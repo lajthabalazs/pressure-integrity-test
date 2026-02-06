@@ -23,6 +23,7 @@ repositories {
 }
 
 dependencies {
+    implementation("com.formdev:flatlaf:3.5")
     testImplementation(platform("org.junit:junit-bom:6.0.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -72,7 +73,7 @@ tasks.jacocoTestReport {
             fileTree(it) {
                 exclude(
                     "ca/lajthabalazs/pressure_integrity_test/main/**",
-                    "ca/lajthabalazs/pressure_integrity_test/ui/view/**",
+                    "ca/lajthabalazs/pressure_integrity_test/ui/**",
                     "ca/lajthabalazs/pressure_integrity_test/io/**"
                 )
             }
@@ -87,7 +88,7 @@ tasks.jacocoTestCoverageVerification {
             fileTree(it) {
                 exclude(
                     "ca/lajthabalazs/pressure_integrity_test/main/**",
-                    "ca/lajthabalazs/pressure_integrity_test/ui/view/**",
+                    "ca/lajthabalazs/pressure_integrity_test/ui/**",
                     "ca/lajthabalazs/pressure_integrity_test/io/**"
                 )
             }
@@ -132,7 +133,7 @@ tasks.jacocoTestCoverageVerification {
             element = "PACKAGE"
             excludes = listOf(
                 "ca.lajthabalazs.pressure_integrity_test.main.*",
-                "ca.lajthabalazs.pressure_integrity_test.ui.view.*",
+                "ca.lajthabalazs.pressure_integrity_test.ui.*",
                 "ca.lajthabalazs.pressure_integrity_test.io.*"
             )
             limit {
@@ -145,7 +146,7 @@ tasks.jacocoTestCoverageVerification {
             element = "CLASS"
             excludes = listOf(
                 "ca.lajthabalazs.pressure_integrity_test.main.*",
-                "ca.lajthabalazs.pressure_integrity_test.ui.view.*",
+                "ca.lajthabalazs.pressure_integrity_test.ui.*",
                 "ca.lajthabalazs.pressure_integrity_test.io.*"
             )
             limit {
