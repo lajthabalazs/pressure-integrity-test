@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClass.set("ca.lajthabalazs.Main")
+    mainClass.set("ca.lajthabalazs.pressure_integrity_test.main.Main")
 }
 
 group = "ca.lajthabalazs"
@@ -61,35 +61,73 @@ tasks.jacocoTestReport {
         xml.required.set(true)
         html.required.set(true)
     }
-    finalizedBy(tasks.jacocoTestCoverageVerification)
+    classDirectories.setFrom(
+        classDirectories.files.map {
+            fileTree(it) {
+                exclude(
+                    "ca/lajthabalazs/pressure_integrity_test/main/**",
+                    "ca/lajthabalazs/pressure_integrity_test/ui/view/**"
+                )
+            }
+        }
+    )
 }
 
 tasks.jacocoTestCoverageVerification {
-    dependsOn(tasks.jacocoTestReport)
+    dependsOn(tasks.test, tasks.jacocoTestReport)
+    classDirectories.setFrom(
+        classDirectories.files.map {
+            fileTree(it) {
+                exclude(
+                    "ca/lajthabalazs/pressure_integrity_test/main/**"
+                )
+            }
+        }
+    )
+    // Force the task to always execute by removing the default onlyIf condition
+    setOnlyIf { true }
+    doFirst {
+        // Check if test sources exist by checking the test source set
+        val testSourceSet = sourceSets.test.get()
+        val testJavaSrcDirs = testSourceSet.java.srcDirs
+        val hasTestSources = testJavaSrcDirs.any { dir ->
+            dir.exists() && dir.walkTopDown().any { it.isFile && it.extension == "java" }
+        }
+        
+        if (!hasTestSources) {
+            throw GradleException(
+                "No test sources found. Coverage verification requires tests to exist. " +
+                "Please add tests to verify code coverage."
+            )
+        }
+
+        val executionDataFile = layout.buildDirectory.file("jacoco/test.exec").get().asFile
+        if (!executionDataFile.exists()) {
+            throw GradleException(
+                "No coverage data found at ${executionDataFile.path}. " +
+                "Tests must be run and produce coverage data. " +
+                "Coverage verification requires at least one test execution."
+            )
+        }
+    }
     violationRules {
+        isFailOnViolation = true
         rule {
             limit {
-                minimum = "1.0".toBigDecimal()
+                minimum = BigDecimal.ONE
             }
         }
         rule {
             element = "PACKAGE"
-            excludes = listOf(
-                "ca.lajthabalazs.ui.view.*",
-                "ca.lajthabalazs.main.*"
-            )
+
             limit {
-                minimum = "1.0".toBigDecimal()
+                minimum = BigDecimal.ONE
             }
         }
         rule {
             element = "CLASS"
-            excludes = listOf(
-                "ca.lajthabalazs.ui.view.*",
-                "ca.lajthabalazs.main.*"
-            )
             limit {
-                minimum = "1.0".toBigDecimal()
+                minimum = BigDecimal.ONE
             }
         }
     }
