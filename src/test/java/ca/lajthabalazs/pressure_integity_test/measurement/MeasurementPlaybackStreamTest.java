@@ -776,6 +776,71 @@ public class MeasurementPlaybackStreamTest {
   }
 
   @Test
+  public void startPlayback_withOriginalTimestamps_publishesMeasurementsWithUnchangedTimestamps()
+      throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(
+                baseTime,
+                "H1",
+                new BigDecimal("45.0"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")),
+            new Humidity(
+                baseTime + 200,
+                "H1",
+                new BigDecimal("45.2"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")));
+
+    playbackStream.subscribe(received::add);
+    long ignoredStartTime = 999999L; // Should not affect timestamps when useOriginalTimestamps=true
+    playbackStream.startPlayback(measurements, ignoredStartTime, true);
+
+    Thread.sleep(250);
+    Assertions.assertEquals(2, received.size());
+    Assertions.assertEquals(baseTime, received.get(0).getTimeUtc());
+    Assertions.assertEquals(baseTime + 200, received.get(1).getTimeUtc());
+  }
+
+  @Test
+  public void startPlayback_withUpdatedTimestamps_anchorsToStartTime() throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(
+                baseTime,
+                "H1",
+                new BigDecimal("45.0"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")),
+            new Humidity(
+                baseTime + 300,
+                "H1",
+                new BigDecimal("45.3"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")));
+
+    playbackStream.subscribe(received::add);
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime, false);
+
+    Thread.sleep(350);
+    Assertions.assertEquals(2, received.size());
+    Assertions.assertEquals(startTime, received.get(0).getTimeUtc());
+    Assertions.assertEquals(startTime + 300, received.get(1).getTimeUtc());
+  }
+
+  @Test
   public void setSpeed_multipleChangesDuringPlayback_timestampsCorrectAndNoLostMessages()
       throws Exception {
     playbackStream = new MeasurementPlaybackStream();

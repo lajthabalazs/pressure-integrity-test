@@ -24,6 +24,7 @@ public class MeasurementPlaybackStream extends MeasurementStream {
   private final List<ScheduledFuture<?>> scheduledTasks;
   private final long shutdownAwaitMs;
   private volatile double speedFactor = 1.0;
+  private volatile boolean useOriginalTimestamps;
   private volatile long playbackStartTime;
   private volatile long startTime;
   private volatile long firstMeasurementTime;
@@ -68,23 +69,43 @@ public class MeasurementPlaybackStream extends MeasurementStream {
   }
 
   /**
-   * Starts playing back the given measurements in real time.
+   * Starts playing back the given measurements in real time, using updated timestamps (first
+   * measurement at {@code startTime}, subsequent ones at {@code startTime + timeDelta}).
    *
-   * <p>The first measurement will be published immediately with the specified start timestamp.
-   * Subsequent measurements will be published at intervals that match the original time deltas
-   * between measurements, scaled by the current speed factor.
+   * <p>Equivalent to {@code startPlayback(measurements, startTime, false)}.
    *
    * @param measurements the measurements to play back
    * @param startTime the timestamp (in milliseconds since epoch) to use for the first measurement
    * @throws IllegalStateException if playback is already in progress
    */
   public void startPlayback(List<Measurement> measurements, long startTime) {
+    startPlayback(measurements, startTime, false);
+  }
+
+  /**
+   * Starts playing back the given measurements in real time.
+   *
+   * <p>The first measurement will be published immediately. Subsequent measurements will be
+   * published at intervals that match the original time deltas between measurements, scaled by the
+   * current speed factor.
+   *
+   * @param measurements the measurements to play back
+   * @param startTime the timestamp (in milliseconds since epoch) for the first measurement when
+   *     using updated timestamps; ignored when {@code useOriginalTimestamps} is true
+   * @param useOriginalTimestamps if true, each measurement is published with its original timestamp
+   *     ({@link Measurement#getTimeUtc()}); if false, timestamps are updated to start at {@code
+   *     startTime} while preserving deltas between measurements
+   * @throws IllegalStateException if playback is already in progress
+   */
+  public void startPlayback(
+      List<Measurement> measurements, long startTime, boolean useOriginalTimestamps) {
     if (!scheduledTasks.isEmpty()) {
       throw new IllegalStateException("Cannot start playback stream twice");
     }
 
     long first = measurements.getFirst().getTimeUtc();
     this.startTime = startTime;
+    this.useOriginalTimestamps = useOriginalTimestamps;
     this.playbackStartTime = System.currentTimeMillis();
     this.firstMeasurementTime = first;
     this.playbackMeasurements = new ArrayList<>(measurements);
@@ -117,15 +138,17 @@ public class MeasurementPlaybackStream extends MeasurementStream {
     List<Measurement> list = playbackMeasurements;
     Measurement measurement = list.get(index);
     long timeDelta = measurement.getTimeUtc() - firstMeasurementTime;
-    long newTimestamp = startTime + timeDelta;
+    long timestampToPublish =
+        useOriginalTimestamps ? measurement.getTimeUtc() : (startTime + timeDelta);
     double factor = speedFactor;
     long scheduledRealTime = playbackStartTime + (long) (timeDelta / factor);
     long delay = Math.max(0, scheduledRealTime - System.currentTimeMillis());
+    final long finalTimestamp = timestampToPublish;
 
     ScheduledFuture<?> task =
         scheduler.schedule(
             () -> {
-              Measurement adjusted = measurement.withNewTimestamp(newTimestamp);
+              Measurement adjusted = measurement.withNewTimestamp(finalTimestamp);
               publish(adjusted);
               nextIndexToPublish.compareAndSet(index, index + 1);
             },
