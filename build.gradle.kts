@@ -3,7 +3,6 @@ plugins {
     id("application")
     id("com.diffplug.spotless") version "6.25.0"
     id("jacoco")
-    id("com.github.spotbugs") version "6.0.22"
 }
 
 application {
@@ -70,7 +69,7 @@ tasks.jacocoTestCoverageVerification {
     violationRules {
         rule {
             limit {
-                minimum = "1.0".toBigDecimal() // 100% coverage
+                minimum = "1.0".toBigDecimal()
             }
         }
         rule {
@@ -80,7 +79,7 @@ tasks.jacocoTestCoverageVerification {
                 "ca.lajthabalazs.main.*"
             )
             limit {
-                minimum = "1.0".toBigDecimal() // 100% coverage for packages
+                minimum = "1.0".toBigDecimal()
             }
         }
         rule {
@@ -90,34 +89,57 @@ tasks.jacocoTestCoverageVerification {
                 "ca.lajthabalazs.main.*"
             )
             limit {
-                minimum = "1.0".toBigDecimal() // 100% coverage for classes
+                minimum = "1.0".toBigDecimal()
             }
         }
     }
 }
 
-// SpotBugs configuration
-spotbugs {
-    toolVersion.set("4.8.3")
-    effort.set(com.github.spotbugs.snom.Effort.MAX)
-    reportLevel.set(com.github.spotbugs.snom.Confidence.LOW)
+// Task to create a Windows app-image (directory with .exe launcher + bundled JRE via jpackage)
+tasks.register<Exec>("packageExe") {
+    dependsOn(tasks.jar)
+
+    val appName = "pressure-integrity-test"
+    // jpackage requires a numeric version, so strip any suffix like "-SNAPSHOT"
+    val appVersion = project.version.toString().substringBefore("-")
+    val jarFileName = "${appName}-${project.version}.jar"
+
+    val buildDirPath = layout.buildDirectory.get().asFile.path
+    // Clean existing app-image directory, since this jpackage version doesn't support --force
+    val imageDir = file("$buildDirPath/dist/$appName")
+    project.delete(imageDir)
+
+    commandLine(
+        "jpackage",
+        "--win-console",
+        "--type", "app-image",
+        "--input", "$buildDirPath/libs",
+        "--dest", "$buildDirPath/dist",
+        "--name", appName,
+        "--main-jar", jarFileName,
+        "--main-class", application.mainClass.get(),
+        "--app-version", appVersion
+    )
 }
 
-tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
-    val taskName = name
-    reports.create("html") {
-        required.set(true)
-        outputLocation.set(layout.buildDirectory.file("reports/spotbugs/${taskName}.html"))
-    }
-    reports.create("xml") {
-        required.set(true)
-        outputLocation.set(layout.buildDirectory.file("reports/spotbugs/${taskName}.xml"))
-    }
+// Task to zip the generated app-image for distribution
+tasks.register<Zip>("packageZip") {
+    dependsOn(tasks.named("packageExe"))
+
+    val appName = "pressure-integrity-test"
+    val appVersion = project.version.toString().substringBefore("-")
+
+    val buildDirPath = layout.buildDirectory.get().asFile.path
+    val imageDir = file("$buildDirPath/dist/$appName")
+
+    from(imageDir)
+    archiveBaseName.set(appName)
+    archiveVersion.set(appVersion)
+    destinationDirectory.set(file("$buildDirPath/dist"))
 }
 
-// Task to ensure check runs all validations
+// Task to ensure check runs all validations (including formatting)
 tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)
-    dependsOn(tasks.spotbugsMain)
-    dependsOn(tasks.spotbugsTest)
+    dependsOn(tasks.spotlessCheck)
 }

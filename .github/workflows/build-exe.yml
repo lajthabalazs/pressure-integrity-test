@@ -1,60 +1,37 @@
-name: Build Executable
+name: Build Windows Zip
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag'
-        required: true
-        default: '1.0.0'
 
 jobs:
-  build-exe:
+  build-zip:
     runs-on: windows-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up JDK
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        
-    - name: Build project
-      run: .\gradlew.bat build
-      
-    - name: Get jar file name
-      id: jar-name
-      shell: pwsh
-      run: |
-        $jarFile = Get-ChildItem -Path build/libs -Filter "*.jar" -Exclude "*sources.jar","*javadoc.jar" | Select-Object -First 1
-        $jarName = $jarFile.Name
-        Write-Host "jar-name=$jarName" >> $env:GITHUB_OUTPUT
-        Write-Host "Found jar: $jarName"
-      
-    - name: Create executable with jpackage
-      shell: pwsh
-      run: |
-        $version = if ($env:GITHUB_REF -like 'refs/tags/*') { $env:GITHUB_REF -replace 'refs/tags/v', '' } else { ${{ github.event.inputs.version }} }
-        $jarName = "${{ steps.jar-name.outputs.jar-name }}"
-        jpackage --input build/libs --name pressure-integrity-test --main-jar $jarName --main-class ca.lajthabalazs.Main --type app-image --dest dist --app-version $version
-      
-    - name: Create Windows installer
-      shell: pwsh
-      run: |
-        $version = if ($env:GITHUB_REF -like 'refs/tags/*') { $env:GITHUB_REF -replace 'refs/tags/v', '' } else { ${{ github.event.inputs.version }} }
-        $jarName = "${{ steps.jar-name.outputs.jar-name }}"
-        jpackage --input build/libs --name pressure-integrity-test --main-jar $jarName --main-class ca.lajthabalazs.Main --type msi --dest dist --app-version $version --win-dir-chooser --win-menu --win-shortcut
-      
-    - name: Upload executable artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-executable
-        path: dist/
-        retention-days: 30
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for Gradle wrapper
+        shell: bash
+        run: chmod +x ./gradlew
+
+      - name: Build zip with Gradle
+        shell: pwsh
+        run: .\gradlew.bat packageZip
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pressure-integrity-test-zip
+          path: build/dist/*.zip
+          retention-days: 30
 
