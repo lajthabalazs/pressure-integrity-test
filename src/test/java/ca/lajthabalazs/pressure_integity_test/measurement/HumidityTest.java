@@ -1,6 +1,7 @@
 package ca.lajthabalazs.pressure_integity_test.measurement;
 
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
+import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -160,5 +161,49 @@ public class HumidityTest {
             BigDecimal.ZERO,
             new BigDecimal("100"));
     Assertions.assertEquals("47.33434%", Humidity.toString());
+  }
+
+  @Test
+  public void withNewTimestamp_returnsHumidityWithNewTimestamp_preservesOtherFields() {
+    var original =
+        new Humidity(
+            1000L,
+            "H1",
+            new BigDecimal("50"),
+            new BigDecimal("0.1"),
+            new BigDecimal("0"),
+            new BigDecimal("100"));
+    long newTimestamp = 2000L;
+
+    Measurement copy = original.withNewTimestamp(newTimestamp);
+
+    Assertions.assertInstanceOf(Humidity.class, copy);
+    Assertions.assertEquals(newTimestamp, copy.getTimeUtc());
+    Assertions.assertEquals(original.getSourceId(), copy.getSourceId());
+    Assertions.assertEquals(
+        0, original.getValueInDefaultUnit().compareTo(copy.getValueInDefaultUnit()));
+    Assertions.assertEquals(0, original.getSourceSigma().compareTo(copy.getSourceSigma()));
+    Assertions.assertEquals(
+        0, original.getLowerBelievableBound().compareTo(copy.getLowerBelievableBound()));
+    Assertions.assertEquals(
+        0, original.getUpperBelievableBound().compareTo(copy.getUpperBelievableBound()));
+    Assertions.assertEquals(original.getDefaultUnit(), copy.getDefaultUnit());
+  }
+
+  @Test
+  public void withNewTimestamp_doesNotModifyOriginal() {
+    var original =
+        new Humidity(
+            1000L,
+            "H1",
+            new BigDecimal("50"),
+            new BigDecimal("0.1"),
+            BigDecimal.ZERO,
+            new BigDecimal("100"));
+    long originalTime = original.getTimeUtc();
+
+    original.withNewTimestamp(9999L);
+
+    Assertions.assertEquals(originalTime, original.getTimeUtc());
   }
 }

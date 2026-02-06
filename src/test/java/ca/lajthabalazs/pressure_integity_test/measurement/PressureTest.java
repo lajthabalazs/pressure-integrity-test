@@ -1,5 +1,6 @@
 package ca.lajthabalazs.pressure_integity_test.measurement;
 
+import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Assertions;
@@ -322,5 +323,51 @@ public class PressureTest {
               new BigDecimal("0"),
               new BigDecimal("200000"));
         });
+  }
+
+  @Test
+  public void withNewTimestamp_returnsPressureWithNewTimestamp_preservesOtherFields() {
+    var original =
+        new Pressure(
+            789L,
+            "P1",
+            new BigDecimal("101325"),
+            new BigDecimal("10"),
+            new BigDecimal("0"),
+            new BigDecimal("200000"));
+    long newTimestamp = 5000L;
+
+    Measurement copy = original.withNewTimestamp(newTimestamp);
+
+    Assertions.assertInstanceOf(Pressure.class, copy);
+    Assertions.assertEquals(newTimestamp, copy.getTimeUtc());
+    Assertions.assertEquals(original.getSourceId(), copy.getSourceId());
+    Assertions.assertEquals(
+        0, original.getValueInDefaultUnit().compareTo(copy.getValueInDefaultUnit()));
+    Assertions.assertEquals(0, original.getSourceSigma().compareTo(copy.getSourceSigma()));
+    Assertions.assertEquals(
+        0, original.getLowerBelievableBound().compareTo(copy.getLowerBelievableBound()));
+    Assertions.assertEquals(
+        0, original.getUpperBelievableBound().compareTo(copy.getUpperBelievableBound()));
+    Assertions.assertEquals(original.getDefaultUnit(), copy.getDefaultUnit());
+    Assertions.assertEquals(
+        0, original.getPascalValue().compareTo(((Pressure) copy).getPascalValue()));
+  }
+
+  @Test
+  public void withNewTimestamp_doesNotModifyOriginal() {
+    var original =
+        new Pressure(
+            789L,
+            "P1",
+            new BigDecimal("101325"),
+            new BigDecimal("10"),
+            new BigDecimal("0"),
+            new BigDecimal("200000"));
+    long originalTime = original.getTimeUtc();
+
+    original.withNewTimestamp(9999L);
+
+    Assertions.assertEquals(originalTime, original.getTimeUtc());
   }
 }

@@ -9,6 +9,11 @@ import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +22,6 @@ import org.junit.jupiter.api.Test;
 public class MeasurementPlaybackStreamTest {
 
   // Time tolerance constants (in milliseconds)
-  private static final long TIMESTAMP_TOLERANCE_MS = 0; // Timestamps must be exact
   private static final long ARRIVAL_TIME_TOLERANCE_MS = 20;
   private static final long ARRIVAL_DELTA_TOLERANCE_MS = 15;
   private static final long MAX_ALLOWED_OUTLIERS = 2;
@@ -80,12 +84,16 @@ public class MeasurementPlaybackStreamTest {
             BigDecimal.ZERO,
             new BigDecimal("100"));
 
-    playbackStream.publish(testMeasurement);
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(List.of(testMeasurement), startTime);
 
     Thread.sleep(100); // Give handler time to execute
 
     Assertions.assertEquals(1, received.size());
-    Assertions.assertEquals(testMeasurement, received.get(0));
+    Assertions.assertEquals(startTime, received.get(0).getTimeUtc());
+    Assertions.assertEquals(testMeasurement.getSourceId(), received.get(0).getSourceId());
+    Assertions.assertEquals(
+        testMeasurement.getValueInDefaultUnit(), received.get(0).getValueInDefaultUnit());
 
     subscription.unsubscribe();
   }
@@ -348,6 +356,137 @@ public class MeasurementPlaybackStreamTest {
     } finally {
       enableGarbageCollection();
     }
+  }
+
+  @Test
+  public void startPlayback_whenAlreadyPlaying_throwsException() throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> measurements = new ArrayList<>();
+    measurements.add(
+        new Humidity(
+            1000L,
+            "H1",
+            new BigDecimal("50"),
+            new BigDecimal("0.1"),
+            BigDecimal.ZERO,
+            new BigDecimal("100")));
+    measurements.add(
+        new Humidity(
+            1100L,
+            "H1",
+            new BigDecimal("51"),
+            new BigDecimal("0.1"),
+            BigDecimal.ZERO,
+            new BigDecimal("100")));
+
+    long startTime1 = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime1);
+    Thread.sleep(50); // Small delay to ensure isPlaying is set
+
+    long startTime2 = System.currentTimeMillis();
+    Assertions.assertThrows(
+        IllegalStateException.class, () -> playbackStream.startPlayback(measurements, startTime2));
+  }
+
+  @Test
+  public void scheduler_cannotBeStartedTwice() throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> measurements = new ArrayList<>();
+    measurements.add(
+        new Humidity(
+            1000L,
+            "H1",
+            new BigDecimal("50"),
+            new BigDecimal("0.1"),
+            BigDecimal.ZERO,
+            new BigDecimal("100")));
+
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime);
+
+    // Try to start the scheduler again immediately
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> playbackStream.startPlayback(measurements, startTime),
+        "Scheduler should not be able to start twice");
+  }
+
+  @Test
+  public void shutdown_whenAwaitTerminationTimesOut_callsShutdownNow() throws Exception {
+    ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    executor.schedule(
+        () -> {
+          try {
+            Thread.sleep(30_000);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        },
+        0,
+        TimeUnit.MILLISECONDS);
+    playbackStream = new MeasurementPlaybackStream(executor, 50);
+    Thread.sleep(20);
+
+    playbackStream.shutdown();
+
+    Assertions.assertThrows(
+        RejectedExecutionException.class,
+        () ->
+            playbackStream.startPlayback(
+                List.of(
+                    new Humidity(
+                        1000L,
+                        "H1",
+                        new BigDecimal("50"),
+                        new BigDecimal("0.1"),
+                        BigDecimal.ZERO,
+                        new BigDecimal("100"))),
+                System.currentTimeMillis()));
+  }
+
+  @Test
+  public void shutdown_whenThreadInterrupted_callsShutdownNowAndRestoresInterrupt()
+      throws Exception {
+    ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    executor.schedule(
+        () -> {
+          try {
+            Thread.sleep(30_000);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        },
+        0,
+        TimeUnit.MILLISECONDS);
+    playbackStream = new MeasurementPlaybackStream(executor, 5000);
+
+    AtomicBoolean shutdownCompleted = new AtomicBoolean(false);
+    Thread shutdownThread =
+        new Thread(
+            () -> {
+              playbackStream.shutdown();
+              shutdownCompleted.set(true);
+            });
+    shutdownThread.start();
+    Thread.sleep(100);
+    shutdownThread.interrupt();
+    shutdownThread.join(3000);
+
+    Assertions.assertTrue(
+        shutdownCompleted.get(), "Shutdown should complete even when interrupted");
+    Assertions.assertThrows(
+        RejectedExecutionException.class,
+        () ->
+            playbackStream.startPlayback(
+                List.of(
+                    new Humidity(
+                        2000L,
+                        "H1",
+                        new BigDecimal("51"),
+                        new BigDecimal("0.1"),
+                        BigDecimal.ZERO,
+                        new BigDecimal("100"))),
+                System.currentTimeMillis()));
   }
 
   @Test
