@@ -636,4 +636,307 @@ public class MeasurementPlaybackStreamTest {
       enableGarbageCollection();
     }
   }
+
+  @Test
+  public void playback_withSpeedFactor2x_deliversFasterButPreservesTimestamps() throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    playbackStream.setSpeed(2.0);
+    List<Measurement> received = new ArrayList<>();
+    List<Long> receiveTimesMillis = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(
+                baseTime,
+                "H1",
+                new BigDecimal("45.0"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")),
+            new Humidity(
+                baseTime + 200,
+                "H1",
+                new BigDecimal("45.2"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")),
+            new Humidity(
+                baseTime + 400,
+                "H1",
+                new BigDecimal("45.4"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")));
+
+    playbackStream.subscribe(
+        m -> {
+          received.add(m);
+          receiveTimesMillis.add(System.currentTimeMillis());
+        });
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime);
+
+    Thread.sleep(250); // At 2x, 400ms of content takes ~200ms real time
+
+    Assertions.assertEquals(3, received.size());
+    Assertions.assertEquals(startTime, received.get(0).getTimeUtc());
+    Assertions.assertEquals(startTime + 200, received.get(1).getTimeUtc());
+    Assertions.assertEquals(startTime + 400, received.get(2).getTimeUtc());
+    long arrivalDelta1 = receiveTimesMillis.get(1) - receiveTimesMillis.get(0);
+    long arrivalDelta2 = receiveTimesMillis.get(2) - receiveTimesMillis.get(1);
+    Assertions.assertTrue(
+        arrivalDelta1 < 150,
+        "At 2x speed second measurement should arrive in ~100ms real time, was " + arrivalDelta1);
+    Assertions.assertTrue(
+        arrivalDelta2 < 150,
+        "At 2x speed third measurement should arrive in ~100ms real time, was " + arrivalDelta2);
+  }
+
+  @Test
+  public void playback_withSpeedFactorHalf_deliversSlowerButPreservesTimestamps() throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    playbackStream.setSpeed(0.5);
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(
+                baseTime,
+                "H1",
+                new BigDecimal("45.0"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")),
+            new Humidity(
+                baseTime + 100,
+                "H1",
+                new BigDecimal("45.1"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")));
+
+    playbackStream.subscribe(received::add);
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime);
+
+    Thread.sleep(150); // At 0.5x, 100ms delta = 200ms real; first is immediate
+    Assertions.assertEquals(1, received.size());
+    Thread.sleep(150);
+    Assertions.assertEquals(2, received.size());
+    Assertions.assertEquals(startTime, received.get(0).getTimeUtc());
+    Assertions.assertEquals(startTime + 100, received.get(1).getTimeUtc());
+  }
+
+  @Test
+  public void setSpeed_duringPlayback_reschedulesAndDoesNotLoseMessages() throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      measurements.add(
+          new Humidity(
+              baseTime + i * 100L,
+              "H1",
+              new BigDecimal("45." + i),
+              new BigDecimal("0.1"),
+              BigDecimal.ZERO,
+              new BigDecimal("100")));
+    }
+
+    playbackStream.subscribe(received::add);
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime);
+
+    Thread.sleep(80); // Let first one and maybe second be delivered
+    playbackStream.setSpeed(4.0); // Speed up remainder
+
+    Thread.sleep(300); // Allow rest to complete at 4x
+
+    Assertions.assertTrue(
+        received.size() >= 5,
+        "All 5 measurements must be received (possibly with duplicates), got " + received.size());
+    List<Long> timestamps =
+        received.stream().map(Measurement::getTimeUtc).distinct().sorted().toList();
+    Assertions.assertEquals(
+        5, timestamps.size(), "All 5 distinct timestamps must appear: " + timestamps);
+    Assertions.assertEquals(startTime, timestamps.get(0));
+    Assertions.assertEquals(startTime + 400, timestamps.get(4));
+  }
+
+  @Test
+  public void setSpeed_invalidFactor_throws() {
+    playbackStream = new MeasurementPlaybackStream();
+    Assertions.assertThrows(IllegalArgumentException.class, () -> playbackStream.setSpeed(0));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> playbackStream.setSpeed(-1));
+    Assertions.assertThrows(
+        IllegalArgumentException.class, () -> playbackStream.setSpeed(Double.NaN));
+    Assertions.assertThrows(
+        IllegalArgumentException.class, () -> playbackStream.setSpeed(Double.POSITIVE_INFINITY));
+  }
+
+  @Test
+  public void setSpeed_multipleChangesDuringPlayback_timestampsCorrectAndNoLostMessages()
+      throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements = new ArrayList<>();
+    for (int i = 0; i < 6; i++) {
+      measurements.add(
+          new Humidity(
+              baseTime + i * 100L,
+              "H1",
+              new BigDecimal("45." + i),
+              new BigDecimal("0.1"),
+              BigDecimal.ZERO,
+              new BigDecimal("100")));
+    }
+
+    playbackStream.subscribe(received::add);
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime);
+
+    Thread.sleep(60);
+    playbackStream.setSpeed(3.0);
+    Thread.sleep(80);
+    playbackStream.setSpeed(0.5);
+    Thread.sleep(120);
+    playbackStream.setSpeed(2.0);
+    Thread.sleep(400);
+
+    Assertions.assertTrue(
+        received.size() >= 6,
+        "All 6 measurements must be received after multiple speed changes, got " + received.size());
+    List<Long> distinctTimestamps =
+        received.stream().map(Measurement::getTimeUtc).distinct().sorted().toList();
+    Assertions.assertEquals(
+        6,
+        distinctTimestamps.size(),
+        "All 6 distinct timestamps must appear after speed changes: " + distinctTimestamps);
+    for (int i = 0; i < 6; i++) {
+      Assertions.assertEquals(
+          startTime + i * 100L,
+          distinctTimestamps.get(i),
+          "Timestamp at index " + i + " must be unchanged by speed changes");
+    }
+  }
+
+  @Test
+  public void setSpeed_afterChange_measurementValuesAndSourceIdUnchanged() throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(
+                baseTime,
+                "sensor-A",
+                new BigDecimal("12.34"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")),
+            new Humidity(
+                baseTime + 50,
+                "sensor-A",
+                new BigDecimal("56.78"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")));
+
+    playbackStream.subscribe(received::add);
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime);
+    Thread.sleep(20);
+    playbackStream.setSpeed(10.0);
+    Thread.sleep(100);
+
+    Assertions.assertTrue(received.size() >= 2, "Both measurements must be received");
+    Measurement first =
+        received.stream().filter(m -> m.getTimeUtc() == startTime).findFirst().get();
+    Measurement second =
+        received.stream().filter(m -> m.getTimeUtc() == startTime + 50).findFirst().get();
+    Assertions.assertEquals("sensor-A", first.getSourceId());
+    Assertions.assertEquals("sensor-A", second.getSourceId());
+    Assertions.assertEquals(0, new BigDecimal("12.34").compareTo(first.getValueInDefaultUnit()));
+    Assertions.assertEquals(0, new BigDecimal("56.78").compareTo(second.getValueInDefaultUnit()));
+  }
+
+  @Test
+  public void setSpeed_rapidChanges_stillReceivesAllMeasurementsWithCorrectTimestamps()
+      throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      measurements.add(
+          new Humidity(
+              baseTime + i * 150L,
+              "H1",
+              new BigDecimal("40." + i),
+              new BigDecimal("0.1"),
+              BigDecimal.ZERO,
+              new BigDecimal("100")));
+    }
+
+    playbackStream.subscribe(received::add);
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(measurements, startTime);
+
+    playbackStream.setSpeed(2.0);
+    playbackStream.setSpeed(0.25);
+    playbackStream.setSpeed(8.0);
+    Thread.sleep(500);
+
+    Assertions.assertTrue(
+        received.size() >= 4,
+        "All 4 measurements must be received despite rapid speed changes, got " + received.size());
+    List<Long> distinctTimestamps =
+        received.stream().map(Measurement::getTimeUtc).distinct().sorted().toList();
+    Assertions.assertEquals(
+        4,
+        distinctTimestamps.size(),
+        "All 4 distinct timestamps must be correct: " + distinctTimestamps);
+    Assertions.assertEquals(startTime, distinctTimestamps.get(0));
+    Assertions.assertEquals(startTime + 150, distinctTimestamps.get(1));
+    Assertions.assertEquals(startTime + 300, distinctTimestamps.get(2));
+    Assertions.assertEquals(startTime + 450, distinctTimestamps.get(3));
+  }
+
+  @Test
+  public void setSpeed_thenStopPlayback_noExceptionAndCleanState() throws Exception {
+    playbackStream = new MeasurementPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(
+                baseTime,
+                "H1",
+                new BigDecimal("50"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")),
+            new Humidity(
+                baseTime + 500,
+                "H1",
+                new BigDecimal("51"),
+                new BigDecimal("0.1"),
+                BigDecimal.ZERO,
+                new BigDecimal("100")));
+
+    playbackStream.subscribe(received::add);
+    playbackStream.startPlayback(measurements, System.currentTimeMillis());
+    Thread.sleep(30);
+    playbackStream.setSpeed(0.1);
+    Thread.sleep(50);
+    playbackStream.stopPlayback();
+
+    Assertions.assertDoesNotThrow(
+        () -> playbackStream.startPlayback(measurements, System.currentTimeMillis()));
+    Thread.sleep(100);
+    playbackStream.stopPlayback();
+    Assertions.assertTrue(received.size() >= 1, "At least first measurement received before stop");
+  }
 }
