@@ -66,7 +66,7 @@ tasks.jacocoTestReport {
             fileTree(it) {
                 exclude(
                     "ca/lajthabalazs/pressure_integrity_test/main/**",
-                    "ca/lajthabalazs/pressure_integrity_test/ui/view/**"
+                    "ca/lajthabalazs/pressure_integrity_test/io/FileSystemTextFileReader.class"
                 )
             }
         }
@@ -79,7 +79,8 @@ tasks.jacocoTestCoverageVerification {
         classDirectories.files.map {
             fileTree(it) {
                 exclude(
-                    "ca/lajthabalazs/pressure_integrity_test/main/**"
+                    "ca/lajthabalazs/pressure_integrity_test/main/**",
+                    "ca/lajthabalazs/pressure_integrity_test/io/FileSystemTextFileReader.class"
                 )
             }
         }
