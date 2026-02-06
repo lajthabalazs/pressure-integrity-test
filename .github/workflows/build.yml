@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Run Spotless check
+      run: ./gradlew spotlessCheck
+      
+    - name: Run tests with coverage
+      run: ./gradlew test jacocoTestReport
+      
+    - name: Verify code coverage
+      run: ./gradlew jacocoTestCoverageVerification
+      
+    - name: Run SpotBugs
+      run: ./gradlew spotbugsMain spotbugsTest
+      
+    - name: Build project
+      run: ./gradlew build
+      
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      if: always()
+      with:
+        files: build/reports/jacoco/test/jacocoTestReport.xml
+        fail_ci_if_error: false
+
