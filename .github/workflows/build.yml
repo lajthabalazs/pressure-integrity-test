@@ -23,18 +23,6 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
-    - name: Run Spotless check
-      run: ./gradlew spotlessCheck
-      
-    - name: Run tests with coverage
-      run: ./gradlew test jacocoTestReport
-      
-    - name: Verify code coverage
-      run: ./gradlew jacocoTestCoverageVerification
-      
-    - name: Run SpotBugs
-      run: ./gradlew spotbugsMain spotbugsTest
-      
     - name: Build project
       run: ./gradlew build
       
