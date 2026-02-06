@@ -4,6 +4,8 @@ import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.NewTestWizardViewMod
 import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.StageConfig;
 import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.TestType;
 import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -17,10 +19,10 @@ class TestTypeStepPanel extends JPanel {
   private static final int[] MINUTE_OPTIONS = {0, 10, 20, 30, 40, 50};
   private static final double MIN_OVERPRESSURE = 0;
   private static final double MAX_OVERPRESSURE = 2;
-  private static final double OVERPRESSURE_STEP = 0.1;
 
   private final NewTestWizardViewModel viewModel;
   private final JComboBox<TestType> typeCombo;
+  private final JLabel stagesHeaderLabel;
   private final JPanel stagesPanel;
   private TestType lastRebuiltTestType;
 
@@ -32,22 +34,34 @@ class TestTypeStepPanel extends JPanel {
     gbc.insets = new Insets(5, 5, 5, 5);
     gbc.anchor = GridBagConstraints.WEST;
     gbc.fill = GridBagConstraints.HORIZONTAL;
-    gbc.gridwidth = 2;
 
     JLabel typeLabel = new JLabel("Test type:");
     gbc.gridx = 0;
     gbc.gridy = 0;
+    gbc.gridwidth = 1;
+    gbc.weightx = 0;
     add(typeLabel, gbc);
 
     typeCombo = new JComboBox<>(TestType.values());
     typeCombo.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UNDERLINE_COLOR));
     typeCombo.addActionListener(e -> viewModel.setTestType((TestType) typeCombo.getSelectedItem()));
-    gbc.gridy = 1;
+    gbc.gridx = 1;
+    gbc.weightx = 1;
     add(typeCombo, gbc);
+
+    stagesHeaderLabel = new JLabel("Stages");
+    stagesHeaderLabel.setFont(stagesHeaderLabel.getFont().deriveFont(Font.BOLD, 14f));
+    gbc.gridx = 0;
+    gbc.gridy = 1;
+    gbc.gridwidth = 2;
+    gbc.weightx = 1;
+    gbc.insets = new Insets(12, 5, 4, 5);
+    add(stagesHeaderLabel, gbc);
 
     stagesPanel = new JPanel(new GridBagLayout());
     stagesPanel.setBackground(Color.WHITE);
-    stagesPanel.setBorder(BorderFactory.createTitledBorder("Stages"));
+    stagesPanel.setBorder(null);
+    gbc.insets = new Insets(0, 5, 5, 5);
     gbc.gridy = 2;
     gbc.weighty = 1;
     gbc.fill = GridBagConstraints.BOTH;
@@ -108,6 +122,7 @@ class TestTypeStepPanel extends JPanel {
       stagesPanel.add(stageLabel, gbc);
 
       JPanel stageRow = new JPanel();
+      stageRow.setLayout(new FlowLayout(FlowLayout.LEFT, 6, 0));
       stageRow.setBackground(Color.WHITE);
       stageRow.add(new JLabel("Overpressure (bar):"));
 
