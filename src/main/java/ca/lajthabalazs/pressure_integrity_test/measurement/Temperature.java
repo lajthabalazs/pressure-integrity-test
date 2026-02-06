@@ -62,4 +62,15 @@ public class Temperature extends Measurement {
   public BigDecimal getKelvinValue() {
     return super.getValueInDefaultUnit().add(CELSIUS_TO_KELVIN);
   }
+
+  @Override
+  public Measurement withNewTimestamp(long newTimestamp) {
+    return new Temperature(
+        newTimestamp,
+        getSourceId(),
+        getCelsiusValue(),
+        getSourceSigma(),
+        getLowerBelievableBound(),
+        getUpperBelievableBound());
+  }
 }

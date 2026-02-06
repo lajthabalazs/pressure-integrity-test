@@ -22,4 +22,15 @@ public class Humidity extends Measurement {
         lowerBelievableBound,
         upperBelievableBound);
   }
+
+  @Override
+  public Measurement withNewTimestamp(long newTimestamp) {
+    return new Humidity(
+        newTimestamp,
+        getSourceId(),
+        getValueInDefaultUnit(),
+        getSourceSigma(),
+        getLowerBelievableBound(),
+        getUpperBelievableBound());
+  }
 }

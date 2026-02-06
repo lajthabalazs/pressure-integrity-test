@@ -48,10 +48,26 @@ public abstract class Measurement {
     return sourceSigma;
   }
 
+  public BigDecimal getLowerBelievableBound() {
+    return lowerBelievableBound;
+  }
+
+  public BigDecimal getUpperBelievableBound() {
+    return upperBelievableBound;
+  }
+
   public boolean isBelievable() {
     return valueInDefaultUnit.compareTo(lowerBelievableBound) >= 0
         && valueInDefaultUnit.compareTo(upperBelievableBound) <= 0;
   }
+
+  /**
+   * Creates a copy of this measurement with a new timestamp, preserving all other properties.
+   *
+   * @param newTimestamp the new timestamp in milliseconds since epoch
+   * @return a new measurement instance with the adjusted timestamp
+   */
+  public abstract Measurement withNewTimestamp(long newTimestamp);
 
   @Override
   public String toString() {

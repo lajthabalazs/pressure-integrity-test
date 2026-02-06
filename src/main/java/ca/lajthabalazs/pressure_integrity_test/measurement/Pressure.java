@@ -79,4 +79,15 @@ public class Pressure extends Measurement {
   public BigDecimal getKiloPascalValue() {
     return super.getValueInDefaultUnit().multiply(PASCAL_TO_KILO_PASCAL);
   }
+
+  @Override
+  public Measurement withNewTimestamp(long newTimestamp) {
+    return new Pressure(
+        newTimestamp,
+        getSourceId(),
+        getPascalValue(),
+        getSourceSigma(),
+        getLowerBelievableBound(),
+        getUpperBelievableBound());
+  }
 }

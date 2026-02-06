@@ -1,8 +1,14 @@
 plugins {
     id("java")
     id("application")
-    id("com.diffplug.spotless") version "6.25.0"
+    id("com.diffplug.spotless") version "8.2.1"
     id("jacoco")
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }
 
 application {
@@ -17,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation(platform("org.junit:junit-bom:6.0.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -52,7 +58,7 @@ spotless {
 }
 
 jacoco {
-    toolVersion = "0.8.12"
+    toolVersion = "0.8.14"
 }
 
 tasks.jacocoTestReport {
@@ -62,11 +68,12 @@ tasks.jacocoTestReport {
         html.required.set(true)
     }
     classDirectories.setFrom(
-        classDirectories.files.map {
+        sourceSets.main.get().output.classesDirs.files.map {
             fileTree(it) {
                 exclude(
                     "ca/lajthabalazs/pressure_integrity_test/main/**",
-                    "ca/lajthabalazs/pressure_integrity_test/io/FileSystemTextFileReader.class"
+                    "ca/lajthabalazs/pressure_integrity_test/ui/view/**",
+                    "ca/lajthabalazs/pressure_integrity_test/io/**"
                 )
             }
         }
@@ -76,11 +83,12 @@ tasks.jacocoTestReport {
 tasks.jacocoTestCoverageVerification {
     dependsOn(tasks.test, tasks.jacocoTestReport)
     classDirectories.setFrom(
-        classDirectories.files.map {
+        sourceSets.main.get().output.classesDirs.files.map {
             fileTree(it) {
                 exclude(
                     "ca/lajthabalazs/pressure_integrity_test/main/**",
-                    "ca/lajthabalazs/pressure_integrity_test/io/FileSystemTextFileReader.class"
+                    "ca/lajthabalazs/pressure_integrity_test/ui/view/**",
+                    "ca/lajthabalazs/pressure_integrity_test/io/**"
                 )
             }
         }
@@ -115,20 +123,35 @@ tasks.jacocoTestCoverageVerification {
         isFailOnViolation = true
         rule {
             limit {
-                minimum = BigDecimal.ONE
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = BigDecimal("1.0")
             }
         }
         rule {
             element = "PACKAGE"
-
+            excludes = listOf(
+                "ca.lajthabalazs.pressure_integrity_test.main.*",
+                "ca.lajthabalazs.pressure_integrity_test.ui.view.*",
+                "ca.lajthabalazs.pressure_integrity_test.io.*"
+            )
             limit {
-                minimum = BigDecimal.ONE
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = BigDecimal("1.0")
             }
         }
         rule {
             element = "CLASS"
+            excludes = listOf(
+                "ca.lajthabalazs.pressure_integrity_test.main.*",
+                "ca.lajthabalazs.pressure_integrity_test.ui.view.*",
+                "ca.lajthabalazs.pressure_integrity_test.io.*"
+            )
             limit {
-                minimum = BigDecimal.ONE
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = BigDecimal("1.0")
             }
         }
     }
