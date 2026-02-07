@@ -1,5 +1,8 @@
 package ca.lajthabalazs.pressure_integrity_test.ui.viewmodel;
 
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfigReader;
+import ca.lajthabalazs.pressure_integrity_test.io.FileSystemTextFileReader;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,8 +16,11 @@ public class NewTestWizardViewModel {
 
   private final List<Listener> listeners = new ArrayList<>();
 
+  private final File rootDirectory;
   private int currentStepIndex = 0;
   private File selectedFile;
+  private SiteConfig siteConfig;
+  private String siteConfigLoadError;
   private boolean step1Finalized;
   private TestType testType;
   private final List<StageConfig> stages = new ArrayList<>();
@@ -22,8 +28,14 @@ public class NewTestWizardViewModel {
   private String dataInterfaceText = "";
   private boolean step3Finalized;
 
-  public NewTestWizardViewModel() {
+  public NewTestWizardViewModel(File rootDirectory) {
+    this.rootDirectory =
+        rootDirectory != null ? rootDirectory : new File(System.getProperty("user.dir"));
     setTestType(TestType.EITV);
+  }
+
+  public File getRootDirectory() {
+    return rootDirectory;
   }
 
   public void addListener(Listener listener) {
@@ -86,7 +98,25 @@ public class NewTestWizardViewModel {
 
   public void setSelectedFile(File file) {
     this.selectedFile = file;
+    this.siteConfig = null;
+    this.siteConfigLoadError = null;
+    if (file != null && file.exists()) {
+      try {
+        SiteConfigReader reader = new SiteConfigReader(new FileSystemTextFileReader());
+        this.siteConfig = reader.read(file.getAbsolutePath());
+      } catch (Exception e) {
+        this.siteConfigLoadError = e.getMessage();
+      }
+    }
     notifyListeners();
+  }
+
+  public SiteConfig getSiteConfig() {
+    return siteConfig;
+  }
+
+  public String getSiteConfigLoadError() {
+    return siteConfigLoadError;
   }
 
   public boolean hasStep1Data() {

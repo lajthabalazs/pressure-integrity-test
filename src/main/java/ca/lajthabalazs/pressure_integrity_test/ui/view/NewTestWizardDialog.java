@@ -10,6 +10,7 @@ import java.awt.Font;
 import java.awt.Frame;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -33,9 +34,9 @@ public class NewTestWizardDialog extends JDialog {
   private final JButton startButton;
   private final JButton cancelButton;
 
-  public NewTestWizardDialog(Frame owner) {
+  public NewTestWizardDialog(Frame owner, File rootDirectory) {
     super(owner, "New Test Setup", true);
-    this.viewModel = new NewTestWizardViewModel();
+    this.viewModel = new NewTestWizardViewModel(rootDirectory);
 
     setLayout(new BorderLayout(10, 10));
     setSize(650, 550);
