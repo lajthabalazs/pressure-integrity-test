@@ -22,6 +22,10 @@ public class NewTestWizardViewModel {
   private String dataInterfaceText = "";
   private boolean step3Finalized;
 
+  public NewTestWizardViewModel() {
+    setTestType(TestType.EITV);
+  }
+
   public void addListener(Listener listener) {
     listeners.add(listener);
   }

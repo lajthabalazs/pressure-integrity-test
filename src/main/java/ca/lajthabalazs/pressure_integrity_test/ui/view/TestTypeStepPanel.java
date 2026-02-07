@@ -4,12 +4,9 @@ import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.NewTestWizardViewMod
 import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.StageConfig;
 import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.TestType;
 import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -23,49 +20,45 @@ class TestTypeStepPanel extends JPanel {
   private final NewTestWizardViewModel viewModel;
   private final JComboBox<TestType> typeCombo;
   private final JLabel stagesHeaderLabel;
-  private final JPanel stagesPanel;
+  private final Box stagesPanel;
   private TestType lastRebuiltTestType;
 
   TestTypeStepPanel(NewTestWizardViewModel viewModel) {
     this.viewModel = viewModel;
     setBackground(Color.WHITE);
-    setLayout(new GridBagLayout());
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.insets = new Insets(5, 5, 5, 5);
-    gbc.anchor = GridBagConstraints.WEST;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
+    setLayout(new javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS));
 
-    JLabel typeLabel = new JLabel("Test type:");
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.gridwidth = 1;
-    gbc.weightx = 0;
-    add(typeLabel, gbc);
-
+    JPanel typeRow = new JPanel();
+    typeRow.setLayout(new javax.swing.BoxLayout(typeRow, javax.swing.BoxLayout.X_AXIS));
+    typeRow.setBackground(Color.WHITE);
+    typeRow.add(new JLabel("Test type:"));
+    typeRow.add(Box.createHorizontalStrut(8));
     typeCombo = new JComboBox<>(TestType.values());
+    typeCombo.setPrototypeDisplayValue(TestType.EITV);
+    typeCombo.setMaximumSize(typeCombo.getPreferredSize());
     typeCombo.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UNDERLINE_COLOR));
     typeCombo.addActionListener(e -> viewModel.setTestType((TestType) typeCombo.getSelectedItem()));
-    gbc.gridx = 1;
-    gbc.weightx = 1;
-    add(typeCombo, gbc);
+    typeRow.add(typeCombo);
+    typeRow.add(Box.createHorizontalGlue());
+    typeRow.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+    typeRow.setMaximumSize(typeRow.getPreferredSize());
+    add(typeRow);
+
+    add(Box.createVerticalStrut(12));
 
     stagesHeaderLabel = new JLabel("Stages");
     stagesHeaderLabel.setFont(stagesHeaderLabel.getFont().deriveFont(Font.BOLD, 14f));
-    gbc.gridx = 0;
-    gbc.gridy = 1;
-    gbc.gridwidth = 2;
-    gbc.weightx = 1;
-    gbc.insets = new Insets(12, 5, 4, 5);
-    add(stagesHeaderLabel, gbc);
+    stagesHeaderLabel.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+    stagesHeaderLabel.setMaximumSize(stagesHeaderLabel.getPreferredSize());
+    add(stagesHeaderLabel);
 
-    stagesPanel = new JPanel(new GridBagLayout());
-    stagesPanel.setBackground(Color.WHITE);
-    stagesPanel.setBorder(null);
-    gbc.insets = new Insets(0, 5, 5, 5);
-    gbc.gridy = 2;
-    gbc.weighty = 1;
-    gbc.fill = GridBagConstraints.BOTH;
-    add(stagesPanel, gbc);
+    add(Box.createVerticalStrut(4));
+
+    stagesPanel = Box.createVerticalBox();
+    stagesPanel.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+    add(stagesPanel);
+
+    add(Box.createVerticalGlue());
 
     updateFromViewModel();
   }
@@ -107,24 +100,15 @@ class TestTypeStepPanel extends JPanel {
     }
 
     var stages = viewModel.getStages();
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.insets = new Insets(3, 3, 3, 3);
-    gbc.anchor = GridBagConstraints.WEST;
 
     for (int i = 0; i < stages.size(); i++) {
       final int stageIndex = i;
       StageConfig config = stages.get(i);
 
-      JLabel stageLabel = new JLabel("Stage " + (i + 1) + ":");
-      gbc.gridx = 0;
-      gbc.gridy = i;
-      gbc.gridwidth = 1;
-      stagesPanel.add(stageLabel, gbc);
-
-      JPanel stageRow = new JPanel();
-      stageRow.setLayout(new FlowLayout(FlowLayout.LEFT, 6, 0));
-      stageRow.setBackground(Color.WHITE);
-      stageRow.add(new JLabel("Overpressure (bar):"));
+      Box stageLine = Box.createHorizontalBox();
+      stageLine.add(new JLabel("Stage " + (i + 1) + ":"));
+      stageLine.add(Box.createHorizontalStrut(6));
+      stageLine.add(new JLabel("Overpressure (bar):"));
 
       String overpressureDisplay =
           (config.overpressureBar() == 0 && config.durationMinutes() == 0)
@@ -199,16 +183,22 @@ class TestTypeStepPanel extends JPanel {
       hoursField.getDocument().addDocumentListener(docListener);
       minutesCombo.addActionListener(e -> updateStage.run());
 
-      stageRow.add(overpressureField);
-      stageRow.add(new JLabel("Duration:"));
-      stageRow.add(hoursField);
-      stageRow.add(new JLabel("h"));
-      stageRow.add(minutesCombo);
-      stageRow.add(new JLabel("min"));
-
-      gbc.gridx = 1;
-      stagesPanel.add(stageRow, gbc);
+      stageLine.add(overpressureField);
+      stageLine.add(Box.createHorizontalStrut(6));
+      stageLine.add(new JLabel("Duration:"));
+      stageLine.add(hoursField);
+      stageLine.add(new JLabel("h"));
+      stageLine.add(minutesCombo);
+      stageLine.add(new JLabel("min"));
+      stageLine.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+      stageLine.setMaximumSize(stageLine.getPreferredSize());
+      stagesPanel.add(stageLine);
+      if (i < stages.size() - 1) {
+        stagesPanel.add(Box.createVerticalStrut(6));
+      }
     }
+
+    stagesPanel.setMaximumSize(stagesPanel.getPreferredSize());
 
     stagesPanel.revalidate();
     stagesPanel.repaint();
