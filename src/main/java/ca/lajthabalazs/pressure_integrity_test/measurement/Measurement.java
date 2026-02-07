@@ -7,25 +7,13 @@ public abstract class Measurement {
   private final String sourceId;
   private final String defaultUnit;
   private final BigDecimal valueInDefaultUnit;
-  private final BigDecimal sourceSigma;
-  private final BigDecimal lowerBelievableBound;
-  private final BigDecimal upperBelievableBound;
 
   protected Measurement(
-      long timeUtc,
-      String sourceId,
-      String defaultUnit,
-      BigDecimal valueInDefaultUnit,
-      BigDecimal sourceSigma,
-      BigDecimal lowerBelievableBound,
-      BigDecimal upperBelievableBound) {
+      long timeUtc, String sourceId, String defaultUnit, BigDecimal valueInDefaultUnit) {
     this.timeUtc = timeUtc;
     this.sourceId = sourceId;
     this.defaultUnit = defaultUnit;
     this.valueInDefaultUnit = valueInDefaultUnit;
-    this.sourceSigma = sourceSigma;
-    this.lowerBelievableBound = lowerBelievableBound;
-    this.upperBelievableBound = upperBelievableBound;
   }
 
   public long getTimeUtc() {
@@ -42,23 +30,6 @@ public abstract class Measurement {
 
   public BigDecimal getValueInDefaultUnit() {
     return valueInDefaultUnit;
-  }
-
-  public BigDecimal getSourceSigma() {
-    return sourceSigma;
-  }
-
-  public BigDecimal getLowerBelievableBound() {
-    return lowerBelievableBound;
-  }
-
-  public BigDecimal getUpperBelievableBound() {
-    return upperBelievableBound;
-  }
-
-  public boolean isBelievable() {
-    return valueInDefaultUnit.compareTo(lowerBelievableBound) >= 0
-        && valueInDefaultUnit.compareTo(upperBelievableBound) <= 0;
   }
 
   /**

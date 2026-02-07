@@ -7,39 +7,12 @@ public class Temperature extends Measurement {
   public static final String KELVIN = "K";
   private static final BigDecimal CELSIUS_TO_KELVIN = new BigDecimal("273.15");
 
-  public Temperature(
-      long timeUtc,
-      String sourceId,
-      BigDecimal celsiusValue,
-      BigDecimal sourceSigma,
-      BigDecimal lowerBelievableBound,
-      BigDecimal upperBelievableBound) {
-    super(
-        timeUtc,
-        sourceId,
-        CELSIUS,
-        celsiusValue,
-        sourceSigma,
-        lowerBelievableBound,
-        upperBelievableBound);
+  public Temperature(long timeUtc, String sourceId, BigDecimal celsiusValue) {
+    super(timeUtc, sourceId, CELSIUS, celsiusValue);
   }
 
-  public Temperature(
-      long timeUtc,
-      String sourceId,
-      BigDecimal value,
-      String unit,
-      BigDecimal sourceSigma,
-      BigDecimal lowerBelievableBound,
-      BigDecimal upperBelievableBound) {
-    super(
-        timeUtc,
-        sourceId,
-        CELSIUS,
-        convertToCelsius(value, unit),
-        sourceSigma,
-        lowerBelievableBound,
-        upperBelievableBound);
+  public Temperature(long timeUtc, String sourceId, BigDecimal value, String unit) {
+    super(timeUtc, sourceId, CELSIUS, convertToCelsius(value, unit));
   }
 
   private static BigDecimal convertToCelsius(BigDecimal value, String unit) {
@@ -65,12 +38,6 @@ public class Temperature extends Measurement {
 
   @Override
   public Measurement withNewTimestamp(long newTimestamp) {
-    return new Temperature(
-        newTimestamp,
-        getSourceId(),
-        getCelsiusValue(),
-        getSourceSigma(),
-        getLowerBelievableBound(),
-        getUpperBelievableBound());
+    return new Temperature(newTimestamp, getSourceId(), getCelsiusValue());
   }
 }

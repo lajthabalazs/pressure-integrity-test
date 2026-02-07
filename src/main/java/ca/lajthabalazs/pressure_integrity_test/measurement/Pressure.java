@@ -12,39 +12,12 @@ public class Pressure extends Measurement {
   private static final BigDecimal BAR_TO_PASCAL = new BigDecimal("100000");
   private static final BigDecimal KILO_PASCAL_TO_PASCAL = new BigDecimal("1000");
 
-  public Pressure(
-      long timeUtc,
-      String sourceId,
-      BigDecimal pascalValue,
-      BigDecimal sourceSigma,
-      BigDecimal lowerBelievableBound,
-      BigDecimal upperBelievableBound) {
-    super(
-        timeUtc,
-        sourceId,
-        PASCAL,
-        pascalValue,
-        sourceSigma,
-        lowerBelievableBound,
-        upperBelievableBound);
+  public Pressure(long timeUtc, String sourceId, BigDecimal pascalValue) {
+    super(timeUtc, sourceId, PASCAL, pascalValue);
   }
 
-  public Pressure(
-      long timeUtc,
-      String sourceId,
-      BigDecimal value,
-      String unit,
-      BigDecimal sourceSigma,
-      BigDecimal lowerBelievableBound,
-      BigDecimal upperBelievableBound) {
-    super(
-        timeUtc,
-        sourceId,
-        PASCAL,
-        convertToPascal(value, unit),
-        sourceSigma,
-        lowerBelievableBound,
-        upperBelievableBound);
+  public Pressure(long timeUtc, String sourceId, BigDecimal value, String unit) {
+    super(timeUtc, sourceId, PASCAL, convertToPascal(value, unit));
   }
 
   private static BigDecimal convertToPascal(BigDecimal value, String unit) {
@@ -82,12 +55,6 @@ public class Pressure extends Measurement {
 
   @Override
   public Measurement withNewTimestamp(long newTimestamp) {
-    return new Pressure(
-        newTimestamp,
-        getSourceId(),
-        getPascalValue(),
-        getSourceSigma(),
-        getLowerBelievableBound(),
-        getUpperBelievableBound());
+    return new Pressure(newTimestamp, getSourceId(), getPascalValue());
   }
 }

@@ -75,14 +75,7 @@ public class MeasurementPlaybackStreamTest {
 
     MeasurementStream.Subscription subscription = playbackStream.subscribe(received::add);
 
-    Humidity testMeasurement =
-        new Humidity(
-            1000L,
-            "H1",
-            new BigDecimal("50"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100"));
+    Humidity testMeasurement = new Humidity(1000L, "H1", new BigDecimal("50"));
 
     long startTime = System.currentTimeMillis();
     playbackStream.startPlayback(List.of(testMeasurement), startTime);
@@ -116,30 +109,9 @@ public class MeasurementPlaybackStreamTest {
       // Create measurements 100ms apart
       long baseTime = 1000000L;
       List<Measurement> measurements = new ArrayList<>();
-      measurements.add(
-          new Humidity(
-              baseTime,
-              "H1",
-              new BigDecimal("45.2"),
-              new BigDecimal("0.1"),
-              BigDecimal.ZERO,
-              new BigDecimal("100")));
-      measurements.add(
-          new Humidity(
-              baseTime + 100,
-              "H1",
-              new BigDecimal("45.5"),
-              new BigDecimal("0.1"),
-              BigDecimal.ZERO,
-              new BigDecimal("100")));
-      measurements.add(
-          new Humidity(
-              baseTime + 200,
-              "H1",
-              new BigDecimal("45.8"),
-              new BigDecimal("0.1"),
-              BigDecimal.ZERO,
-              new BigDecimal("100")));
+      measurements.add(new Humidity(baseTime, "H1", new BigDecimal("45.2")));
+      measurements.add(new Humidity(baseTime + 100, "H1", new BigDecimal("45.5")));
+      measurements.add(new Humidity(baseTime + 200, "H1", new BigDecimal("45.8")));
 
       long startTime = System.currentTimeMillis();
       playbackStream.startPlayback(measurements, startTime);
@@ -238,12 +210,8 @@ public class MeasurementPlaybackStreamTest {
         long timeUtc = Long.parseLong(parts[0]);
         String sourceId = parts[1];
         BigDecimal value = new BigDecimal(parts[2]);
-        BigDecimal sourceSigma = new BigDecimal(parts[3]);
-        BigDecimal lowerBound = new BigDecimal(parts[4]);
-        BigDecimal upperBound = new BigDecimal(parts[5]);
 
-        measurements.add(
-            new Humidity(timeUtc, sourceId, value, sourceSigma, lowerBound, upperBound));
+        measurements.add(new Humidity(timeUtc, sourceId, value));
       }
 
       long startTime = System.currentTimeMillis();
@@ -362,22 +330,8 @@ public class MeasurementPlaybackStreamTest {
   public void startPlayback_whenAlreadyPlaying_throwsException() throws Exception {
     playbackStream = new MeasurementPlaybackStream();
     List<Measurement> measurements = new ArrayList<>();
-    measurements.add(
-        new Humidity(
-            1000L,
-            "H1",
-            new BigDecimal("50"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100")));
-    measurements.add(
-        new Humidity(
-            1100L,
-            "H1",
-            new BigDecimal("51"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100")));
+    measurements.add(new Humidity(1000L, "H1", new BigDecimal("50")));
+    measurements.add(new Humidity(1100L, "H1", new BigDecimal("51")));
 
     long startTime1 = System.currentTimeMillis();
     playbackStream.startPlayback(measurements, startTime1);
@@ -392,14 +346,7 @@ public class MeasurementPlaybackStreamTest {
   public void scheduler_cannotBeStartedTwice() throws Exception {
     playbackStream = new MeasurementPlaybackStream();
     List<Measurement> measurements = new ArrayList<>();
-    measurements.add(
-        new Humidity(
-            1000L,
-            "H1",
-            new BigDecimal("50"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100")));
+    measurements.add(new Humidity(1000L, "H1", new BigDecimal("50")));
 
     long startTime = System.currentTimeMillis();
     playbackStream.startPlayback(measurements, startTime);
@@ -433,14 +380,7 @@ public class MeasurementPlaybackStreamTest {
         RejectedExecutionException.class,
         () ->
             playbackStream.startPlayback(
-                List.of(
-                    new Humidity(
-                        1000L,
-                        "H1",
-                        new BigDecimal("50"),
-                        new BigDecimal("0.1"),
-                        BigDecimal.ZERO,
-                        new BigDecimal("100"))),
+                List.of(new Humidity(1000L, "H1", new BigDecimal("50"))),
                 System.currentTimeMillis()));
   }
 
@@ -478,14 +418,7 @@ public class MeasurementPlaybackStreamTest {
         RejectedExecutionException.class,
         () ->
             playbackStream.startPlayback(
-                List.of(
-                    new Humidity(
-                        2000L,
-                        "H1",
-                        new BigDecimal("51"),
-                        new BigDecimal("0.1"),
-                        BigDecimal.ZERO,
-                        new BigDecimal("100"))),
+                List.of(new Humidity(2000L, "H1", new BigDecimal("51"))),
                 System.currentTimeMillis()));
   }
 
@@ -498,22 +431,8 @@ public class MeasurementPlaybackStreamTest {
 
     long baseTime = 1000000L;
     List<Measurement> measurements = new ArrayList<>();
-    measurements.add(
-        new Humidity(
-            baseTime,
-            "H1",
-            new BigDecimal("45.2"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100")));
-    measurements.add(
-        new Humidity(
-            baseTime + 100,
-            "H1",
-            new BigDecimal("45.5"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100")));
+    measurements.add(new Humidity(baseTime, "H1", new BigDecimal("45.2")));
+    measurements.add(new Humidity(baseTime + 100, "H1", new BigDecimal("45.5")));
 
     long startTime = System.currentTimeMillis();
     playbackStream.startPlayback(measurements, startTime);
@@ -531,22 +450,8 @@ public class MeasurementPlaybackStreamTest {
   public void isPlaying_reflectsPlaybackState() throws Exception {
     playbackStream = new MeasurementPlaybackStream();
     List<Measurement> measurements = new ArrayList<>();
-    measurements.add(
-        new Humidity(
-            1000L,
-            "H1",
-            new BigDecimal("50"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100")));
-    measurements.add(
-        new Humidity(
-            1100L,
-            "H1",
-            new BigDecimal("51"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100")));
+    measurements.add(new Humidity(1000L, "H1", new BigDecimal("50")));
+    measurements.add(new Humidity(1100L, "H1", new BigDecimal("51")));
 
     long startTime = System.currentTimeMillis();
     playbackStream.startPlayback(measurements, startTime);
@@ -579,13 +484,7 @@ public class MeasurementPlaybackStreamTest {
 
       for (int i = 0; i < measurementCount; i++) {
         measurements.add(
-            new Humidity(
-                baseTime + i, // 1ms apart
-                "H1",
-                new BigDecimal("45.0").add(new BigDecimal(i * 0.1)),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")));
+            new Humidity(baseTime + i, "H1", new BigDecimal("45.0").add(new BigDecimal(i * 0.1))));
       }
 
       long startTime = System.currentTimeMillis();
@@ -646,27 +545,9 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements =
         List.of(
-            new Humidity(
-                baseTime,
-                "H1",
-                new BigDecimal("45.0"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")),
-            new Humidity(
-                baseTime + 200,
-                "H1",
-                new BigDecimal("45.2"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")),
-            new Humidity(
-                baseTime + 400,
-                "H1",
-                new BigDecimal("45.4"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")));
+            new Humidity(baseTime, "H1", new BigDecimal("45.0")),
+            new Humidity(baseTime + 200, "H1", new BigDecimal("45.2")),
+            new Humidity(baseTime + 400, "H1", new BigDecimal("45.4")));
 
     playbackStream.subscribe(
         m -> {
@@ -700,20 +581,8 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements =
         List.of(
-            new Humidity(
-                baseTime,
-                "H1",
-                new BigDecimal("45.0"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")),
-            new Humidity(
-                baseTime + 100,
-                "H1",
-                new BigDecimal("45.1"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")));
+            new Humidity(baseTime, "H1", new BigDecimal("45.0")),
+            new Humidity(baseTime + 100, "H1", new BigDecimal("45.1")));
 
     playbackStream.subscribe(received::add);
     long startTime = System.currentTimeMillis();
@@ -734,14 +603,7 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
-      measurements.add(
-          new Humidity(
-              baseTime + i * 100L,
-              "H1",
-              new BigDecimal("45." + i),
-              new BigDecimal("0.1"),
-              BigDecimal.ZERO,
-              new BigDecimal("100")));
+      measurements.add(new Humidity(baseTime + i * 100L, "H1", new BigDecimal("45." + i)));
     }
 
     playbackStream.subscribe(received::add);
@@ -783,20 +645,8 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements =
         List.of(
-            new Humidity(
-                baseTime,
-                "H1",
-                new BigDecimal("45.0"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")),
-            new Humidity(
-                baseTime + 200,
-                "H1",
-                new BigDecimal("45.2"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")));
+            new Humidity(baseTime, "H1", new BigDecimal("45.0")),
+            new Humidity(baseTime + 200, "H1", new BigDecimal("45.2")));
 
     playbackStream.subscribe(received::add);
     long ignoredStartTime = 999999L; // Should not affect timestamps when useOriginalTimestamps=true
@@ -815,20 +665,8 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements =
         List.of(
-            new Humidity(
-                baseTime,
-                "H1",
-                new BigDecimal("45.0"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")),
-            new Humidity(
-                baseTime + 300,
-                "H1",
-                new BigDecimal("45.3"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")));
+            new Humidity(baseTime, "H1", new BigDecimal("45.0")),
+            new Humidity(baseTime + 300, "H1", new BigDecimal("45.3")));
 
     playbackStream.subscribe(received::add);
     long startTime = System.currentTimeMillis();
@@ -848,14 +686,7 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements = new ArrayList<>();
     for (int i = 0; i < 6; i++) {
-      measurements.add(
-          new Humidity(
-              baseTime + i * 100L,
-              "H1",
-              new BigDecimal("45." + i),
-              new BigDecimal("0.1"),
-              BigDecimal.ZERO,
-              new BigDecimal("100")));
+      measurements.add(new Humidity(baseTime + i * 100L, "H1", new BigDecimal("45." + i)));
     }
 
     playbackStream.subscribe(received::add);
@@ -894,20 +725,8 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements =
         List.of(
-            new Humidity(
-                baseTime,
-                "sensor-A",
-                new BigDecimal("12.34"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")),
-            new Humidity(
-                baseTime + 50,
-                "sensor-A",
-                new BigDecimal("56.78"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")));
+            new Humidity(baseTime, "sensor-A", new BigDecimal("12.34")),
+            new Humidity(baseTime + 50, "sensor-A", new BigDecimal("56.78")));
 
     playbackStream.subscribe(received::add);
     long startTime = System.currentTimeMillis();
@@ -935,14 +754,7 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements = new ArrayList<>();
     for (int i = 0; i < 4; i++) {
-      measurements.add(
-          new Humidity(
-              baseTime + i * 150L,
-              "H1",
-              new BigDecimal("40." + i),
-              new BigDecimal("0.1"),
-              BigDecimal.ZERO,
-              new BigDecimal("100")));
+      measurements.add(new Humidity(baseTime + i * 150L, "H1", new BigDecimal("40." + i)));
     }
 
     playbackStream.subscribe(received::add);
@@ -976,20 +788,8 @@ public class MeasurementPlaybackStreamTest {
     long baseTime = 1000000L;
     List<Measurement> measurements =
         List.of(
-            new Humidity(
-                baseTime,
-                "H1",
-                new BigDecimal("50"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")),
-            new Humidity(
-                baseTime + 500,
-                "H1",
-                new BigDecimal("51"),
-                new BigDecimal("0.1"),
-                BigDecimal.ZERO,
-                new BigDecimal("100")));
+            new Humidity(baseTime, "H1", new BigDecimal("50")),
+            new Humidity(baseTime + 500, "H1", new BigDecimal("51")));
 
     playbackStream.subscribe(received::add);
     playbackStream.startPlayback(measurements, System.currentTimeMillis());

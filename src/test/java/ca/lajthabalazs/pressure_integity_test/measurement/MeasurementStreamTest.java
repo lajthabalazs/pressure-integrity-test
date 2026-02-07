@@ -25,14 +25,7 @@ public class MeasurementStreamTest {
     List<Measurement> received = new ArrayList<>();
     stream.subscribe(received::add);
 
-    Measurement m =
-        new Humidity(
-            1000L,
-            "H1",
-            new BigDecimal("50"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100"));
+    Measurement m = new Humidity(1000L, "H1", new BigDecimal("50"));
     stream.publishToSubscribers(m);
 
     Assertions.assertEquals(1, received.size());
@@ -46,14 +39,7 @@ public class MeasurementStreamTest {
     stream.subscribe(first::add);
     stream.subscribe(second::add);
 
-    Measurement m =
-        new Humidity(
-            2000L,
-            "H2",
-            new BigDecimal("60"),
-            new BigDecimal("0.2"),
-            BigDecimal.ZERO,
-            new BigDecimal("100"));
+    Measurement m = new Humidity(2000L, "H2", new BigDecimal("60"));
     stream.publishToSubscribers(m);
 
     Assertions.assertEquals(1, first.size());
@@ -67,27 +53,13 @@ public class MeasurementStreamTest {
     List<Measurement> received = new ArrayList<>();
     MeasurementStream.Subscription sub = stream.subscribe(received::add);
 
-    Measurement m1 =
-        new Humidity(
-            1000L,
-            "H1",
-            new BigDecimal("50"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100"));
+    Measurement m1 = new Humidity(1000L, "H1", new BigDecimal("50"));
     stream.publishToSubscribers(m1);
     Assertions.assertEquals(1, received.size());
 
     sub.unsubscribe();
 
-    Measurement m2 =
-        new Humidity(
-            2000L,
-            "H1",
-            new BigDecimal("51"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100"));
+    Measurement m2 = new Humidity(2000L, "H1", new BigDecimal("51"));
     stream.publishToSubscribers(m2);
 
     Assertions.assertEquals(1, received.size(), "Unsubscribed handler should not receive more");
@@ -116,14 +88,7 @@ public class MeasurementStreamTest {
     stream.subscribe(received::add);
     stream.clearForTest();
 
-    Measurement m =
-        new Humidity(
-            1000L,
-            "H1",
-            new BigDecimal("50"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100"));
+    Measurement m = new Humidity(1000L, "H1", new BigDecimal("50"));
     stream.publishToSubscribers(m);
 
     Assertions.assertTrue(received.isEmpty());
@@ -139,14 +104,7 @@ public class MeasurementStreamTest {
         });
     stream.subscribe(received::add);
 
-    Measurement m =
-        new Humidity(
-            1000L,
-            "H1",
-            new BigDecimal("50"),
-            new BigDecimal("0.1"),
-            BigDecimal.ZERO,
-            new BigDecimal("100"));
+    Measurement m = new Humidity(1000L, "H1", new BigDecimal("50"));
     stream.publishToSubscribers(m);
 
     Assertions.assertEquals(1, received.size());
