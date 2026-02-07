@@ -15,11 +15,6 @@ public class DesignPressure {
 
   public DesignPressure() {}
 
-  public DesignPressure(BigDecimal overpressure_Pa, BigDecimal leakLimit_percent_per_day) {
-    this.overpressure_Pa = overpressure_Pa;
-    this.leakLimit_percent_per_day = leakLimit_percent_per_day;
-  }
-
   public BigDecimal getOverpressure_Pa() {
     return overpressure_Pa;
   }

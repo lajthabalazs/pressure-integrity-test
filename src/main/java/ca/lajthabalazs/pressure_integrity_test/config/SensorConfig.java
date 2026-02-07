@@ -29,14 +29,6 @@ public abstract class SensorConfig {
 
   public SensorConfig() {}
 
-  public SensorConfig(String id, String type, String units, BigDecimal sigma, String description) {
-    this.id = id;
-    this.type = type;
-    this.units = units;
-    this.sigma = sigma;
-    this.description = description;
-  }
-
   public String getId() {
     return id;
   }

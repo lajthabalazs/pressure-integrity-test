@@ -15,8 +15,21 @@ public class SiteConfigWriter {
   private final ObjectMapper objectMapper;
 
   public SiteConfigWriter() {
-    this.objectMapper = new ObjectMapper();
-    this.objectMapper.registerModule(
+    this(createDefaultObjectMapper());
+  }
+
+  /**
+   * Constructor for tests or when using a custom {@link ObjectMapper}.
+   *
+   * @param objectMapper mapper used to serialize; may be configured or a test double
+   */
+  public SiteConfigWriter(ObjectMapper objectMapper) {
+    this.objectMapper = objectMapper;
+  }
+
+  private static ObjectMapper createDefaultObjectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(
         new SimpleModule()
             .addSerializer(
                 BigDecimal.class,
@@ -28,6 +41,7 @@ public class SiteConfigWriter {
                     gen.writeRawValue(value.toPlainString());
                   }
                 }));
+    return mapper;
   }
 
   /**
@@ -47,10 +61,6 @@ public class SiteConfigWriter {
 
   /** Thrown when the configuration cannot be serialized. */
   public static class SiteConfigWriteException extends Exception {
-    public SiteConfigWriteException(String message) {
-      super(message);
-    }
-
     public SiteConfigWriteException(String message, Throwable cause) {
       super(message, cause);
     }

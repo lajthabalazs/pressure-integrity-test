@@ -4,6 +4,8 @@ import ca.lajthabalazs.pressure_integity_test.io.ResourceTextFileReader;
 import ca.lajthabalazs.pressure_integrity_test.config.*;
 import ca.lajthabalazs.pressure_integrity_test.config.SiteConfigReader.SiteConfigParseException;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader.FailedToReadFileException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
@@ -113,5 +115,30 @@ public class SiteConfigReaderTest {
 
     Assertions.assertNotNull(config.getSensors());
     Assertions.assertTrue(config.getSensors().isEmpty());
+  }
+
+  @Test
+  public void read_parseReturnsNull_throwsSiteConfigParseException() {
+    ObjectMapper nullReturningMapper =
+        new ObjectMapper() {
+          @Override
+          public <T> T readValue(String content, Class<T> valueType)
+              throws JsonProcessingException {
+            if (valueType == SiteConfig.class) {
+              return null;
+            }
+            return super.readValue(content, valueType);
+          }
+        };
+    ResourceTextFileReader fileReader = new ResourceTextFileReader(SiteConfigReaderTest.class);
+    SiteConfigReader reader = new SiteConfigReader(fileReader, nullReturningMapper);
+
+    SiteConfigParseException exception =
+        Assertions.assertThrows(
+            SiteConfigParseException.class, () -> reader.read("/site-config-sample.json"));
+    Assertions.assertTrue(
+        exception.getMessage().contains("did not produce a site config object"),
+        "Expected message about null parse result, got: " + exception.getMessage());
+    Assertions.assertNull(exception.getCause());
   }
 }

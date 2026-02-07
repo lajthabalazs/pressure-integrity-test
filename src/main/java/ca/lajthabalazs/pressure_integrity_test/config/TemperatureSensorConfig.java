@@ -16,18 +16,6 @@ public class TemperatureSensorConfig extends SensorConfig {
     setType(TYPE);
   }
 
-  public TemperatureSensorConfig(
-      String id,
-      String units,
-      BigDecimal sigma,
-      String description,
-      ValidRange validRange,
-      BigDecimal volumeWeight) {
-    super(id, TYPE, units, sigma, description);
-    this.validRange = validRange;
-    this.volumeWeight = volumeWeight;
-  }
-
   public ValidRange getValidRange() {
     return validRange;
   }

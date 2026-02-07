@@ -17,8 +17,18 @@ public class SiteConfigReader {
   private final ObjectMapper objectMapper;
 
   public SiteConfigReader(TextFileReader fileReader) {
+    this(fileReader, new ObjectMapper());
+  }
+
+  /**
+   * Constructor for tests or when using a custom {@link ObjectMapper}.
+   *
+   * @param fileReader reader used to load file content
+   * @param objectMapper mapper used to parse JSON; may be configured or a test double
+   */
+  public SiteConfigReader(TextFileReader fileReader, ObjectMapper objectMapper) {
     this.fileReader = fileReader;
-    this.objectMapper = new ObjectMapper();
+    this.objectMapper = objectMapper;
   }
 
   /**

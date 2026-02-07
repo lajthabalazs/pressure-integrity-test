@@ -1,7 +1,6 @@
 package ca.lajthabalazs.pressure_integrity_test.config;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import java.math.BigDecimal;
 
 /** Configuration for a humidity sensor (paired with a temperature sensor for dew-point etc.). */
 @JsonPropertyOrder({
@@ -22,18 +21,6 @@ public class HumiditySensorConfig extends SensorConfig {
 
   public HumiditySensorConfig() {
     setType(TYPE);
-  }
-
-  public HumiditySensorConfig(
-      String id,
-      String units,
-      BigDecimal sigma,
-      String description,
-      ValidRange validRange,
-      String pairedTemperatureSensor) {
-    super(id, TYPE, units, sigma, description);
-    this.validRange = validRange;
-    this.pairedTemperatureSensor = pairedTemperatureSensor;
   }
 
   public ValidRange getValidRange() {

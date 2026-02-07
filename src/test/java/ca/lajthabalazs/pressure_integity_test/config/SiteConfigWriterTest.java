@@ -4,6 +4,9 @@ import ca.lajthabalazs.pressure_integity_test.io.ResourceTextFileReader;
 import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.SiteConfigReader;
 import ca.lajthabalazs.pressure_integrity_test.config.SiteConfigWriter;
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfigWriter.SiteConfigWriteException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -64,5 +67,29 @@ public class SiteConfigWriterTest {
     String expected = fileReader.readAllText("/site-config-write-expected-empty-sensors.json");
 
     Assertions.assertEquals(expected, written);
+  }
+
+  @Test
+  public void write_serializationFails_throwsSiteConfigWriteException() {
+    ObjectMapper failingMapper =
+        new ObjectMapper() {
+          @Override
+          public String writeValueAsString(Object value) throws JsonProcessingException {
+            throw new JsonProcessingException("mock write failure") {};
+          }
+        };
+    SiteConfigWriter writer = new SiteConfigWriter(failingMapper);
+    SiteConfig config = new SiteConfig();
+
+    SiteConfigWriteException exception =
+        Assertions.assertThrows(SiteConfigWriteException.class, () -> writer.writeToString(config));
+    Assertions.assertTrue(
+        exception.getMessage().contains("Failed to write config"),
+        "Expected message about write failure, got: " + exception.getMessage());
+    Assertions.assertTrue(
+        exception.getMessage().contains("mock write failure"),
+        "Expected cause message in exception, got: " + exception.getMessage());
+    Assertions.assertNotNull(exception.getCause());
+    Assertions.assertTrue(exception.getCause() instanceof JsonProcessingException);
   }
 }

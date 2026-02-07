@@ -12,11 +12,6 @@ public class ValidRange {
 
   public ValidRange() {}
 
-  public ValidRange(BigDecimal min, BigDecimal max) {
-    this.min = min;
-    this.max = max;
-  }
-
   public BigDecimal getMin() {
     return min;
   }

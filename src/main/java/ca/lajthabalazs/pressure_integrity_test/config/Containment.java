@@ -12,10 +12,6 @@ public class Containment {
 
   public Containment() {}
 
-  public Containment(BigDecimal netVolume_m3) {
-    this.netVolume_m3 = netVolume_m3;
-  }
-
   public BigDecimal getNetVolume_m3() {
     return netVolume_m3;
   }

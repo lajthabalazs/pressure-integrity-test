@@ -1,7 +1,6 @@
 package ca.lajthabalazs.pressure_integrity_test.config;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import java.util.Collections;
 import java.util.List;
 
 /** Root site configuration: containment, design pressure, and sensor definitions. */
@@ -15,19 +14,6 @@ public class SiteConfig {
   private List<SensorConfig> sensors = List.of();
 
   public SiteConfig() {}
-
-  public SiteConfig(
-      String id,
-      String description,
-      Containment containment,
-      DesignPressure designPressure,
-      List<SensorConfig> sensors) {
-    this.id = id;
-    this.description = description;
-    this.containment = containment;
-    this.designPressure = designPressure;
-    this.sensors = sensors == null ? List.of() : List.copyOf(sensors);
-  }
 
   public String getId() {
     return id;
@@ -62,10 +48,10 @@ public class SiteConfig {
   }
 
   public List<SensorConfig> getSensors() {
-    return sensors == null ? Collections.emptyList() : sensors;
+    return sensors;
   }
 
   public void setSensors(List<SensorConfig> sensors) {
-    this.sensors = sensors == null ? List.of() : List.copyOf(sensors);
+    this.sensors = List.copyOf(sensors);
   }
 }
