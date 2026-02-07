@@ -3,7 +3,7 @@
   "description": "d",
   "containment": { "netVolume_m3": 1 },
   "designPressure": {
-    "overpressure_Pa": 100,
+    "overpressure_bar": 0.001,
     "leakLimit_percent_per_day": 1
   },
   "sensors": [

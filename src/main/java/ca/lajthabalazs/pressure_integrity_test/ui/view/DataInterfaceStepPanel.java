@@ -13,12 +13,12 @@ import javax.swing.JTextArea;
 
 class DataInterfaceStepPanel extends JPanel {
 
-  private final NewTestWizardViewModel viewModel;
+  private final NewTestWizardViewModel wizardViewModel;
   private final JTextArea textArea;
   private boolean isUpdatingFromViewModel;
 
-  DataInterfaceStepPanel(NewTestWizardViewModel viewModel) {
-    this.viewModel = viewModel;
+  DataInterfaceStepPanel(NewTestWizardViewModel wizardViewModel) {
+    this.wizardViewModel = wizardViewModel;
     setBackground(Color.WHITE);
     setLayout(new GridBagLayout());
     GridBagConstraints gbc = new GridBagConstraints();
@@ -62,7 +62,7 @@ class DataInterfaceStepPanel extends JPanel {
 
   private void syncToViewModel() {
     if (!isUpdatingFromViewModel) {
-      viewModel.setDataInterfaceText(textArea.getText());
+      wizardViewModel.getDataInterfaceStep().setDataInterfaceText(textArea.getText());
     }
   }
 
@@ -71,7 +71,7 @@ class DataInterfaceStepPanel extends JPanel {
   }
 
   void updateFromViewModel() {
-    String text = viewModel.getDataInterfaceText();
+    String text = wizardViewModel.getDataInterfaceStep().getDataInterfaceText();
     javax.swing.SwingUtilities.invokeLater(
         () -> {
           if (text.equals(textArea.getText())) {

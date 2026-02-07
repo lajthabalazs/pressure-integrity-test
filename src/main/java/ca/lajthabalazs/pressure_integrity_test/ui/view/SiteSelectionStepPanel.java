@@ -13,7 +13,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.io.File;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -21,21 +20,27 @@ import java.util.List;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JEditorPane;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.border.EmptyBorder;
 
 class SiteSelectionStepPanel extends JPanel {
 
-  private final NewTestWizardViewModel viewModel;
+  private static final String HTML_BODY_START =
+      "<html><body style='font-family:sans-serif;font-size:10px;margin:0'>";
+  private static final String HTML_BODY_END = "</body></html>";
+
+  private final NewTestWizardViewModel wizardViewModel;
   private final JLabel filePathLabel;
   private final JButton chooseButton;
   private final JScrollPane configScrollPane;
-  private final JPanel configContentPanel;
+  private final JEditorPane configEditor;
 
-  SiteSelectionStepPanel(NewTestWizardViewModel viewModel) {
-    this.viewModel = viewModel;
+  SiteSelectionStepPanel(NewTestWizardViewModel wizardViewModel) {
+    this.wizardViewModel = wizardViewModel;
     this.setPreferredSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
     this.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
     setBackground(Color.WHITE);
@@ -62,13 +67,13 @@ class SiteSelectionStepPanel extends JPanel {
 
     this.add(fileChooserPanel, BorderLayout.NORTH);
 
-    configContentPanel = new JPanel();
-    configContentPanel.setLayout(new BoxLayout(configContentPanel, BoxLayout.Y_AXIS));
-    configContentPanel.setBackground(Color.WHITE);
-    configContentPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    configEditor = new JEditorPane();
+    configEditor.setContentType("text/html");
+    configEditor.setEditable(false);
+    configEditor.setBackground(Color.WHITE);
+    configEditor.setBorder(new EmptyBorder(0, 0, 0, 0));
 
-    configScrollPane = new JScrollPane(configContentPanel);
-    configScrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+    configScrollPane = new JScrollPane(configEditor);
     configScrollPane.setBorder(null);
     configScrollPane.getViewport().setBackground(Color.WHITE);
     configScrollPane.setPreferredSize(new java.awt.Dimension(500, 280));
@@ -83,7 +88,8 @@ class SiteSelectionStepPanel extends JPanel {
   }
 
   void updateFromViewModel() {
-    File file = viewModel.getSelectedFile();
+    var step = wizardViewModel.getSiteSelectionStep();
+    File file = step.getSelectedFile();
     if (file != null) {
       filePathLabel.setText(file.getAbsolutePath());
       filePathLabel.setVisible(true);
@@ -92,85 +98,63 @@ class SiteSelectionStepPanel extends JPanel {
       filePathLabel.setVisible(false);
     }
 
-    SiteConfig config = viewModel.getSiteConfig();
-    String loadError = viewModel.getSiteConfigLoadError();
+    SiteConfig config = step.getSiteConfig();
+    String loadError = step.getSiteConfigLoadError();
     configScrollPane.setVisible(config != null || (loadError != null && file != null));
     rebuildConfigContent(config, loadError);
   }
 
   private void rebuildConfigContent(SiteConfig config, String loadError) {
-    configContentPanel.removeAll();
-    configContentPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
     if (loadError != null && config == null) {
-      Box errRow = Box.createHorizontalBox();
-      errRow.add(new JLabel("Failed to load config: " + loadError));
-      errRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-      configContentPanel.add(errRow);
-      configContentPanel.revalidate();
-      configContentPanel.repaint();
+      configEditor.setText(
+          HTML_BODY_START + htmlEscape("Failed to load config: " + loadError) + HTML_BODY_END);
       return;
     }
 
     if (config == null) {
-      configContentPanel.revalidate();
-      configContentPanel.repaint();
+      configEditor.setText(HTML_BODY_START + HTML_BODY_END);
       return;
     }
 
-    // Header: site name
-    JLabel headerLabel = new JLabel(config.getId() != null ? config.getId() : "Site");
-    headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
-    headerLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-    configContentPanel.add(headerLabel);
-    configContentPanel.add(Box.createVerticalStrut(4));
+    StringBuilder sb = new StringBuilder();
+    sb.append(HTML_BODY_START);
+
+    // Header: site name (bold, slightly larger)
+    String siteName = config.getId() != null ? config.getId() : "Site";
+    sb.append("<p style='margin:0 0 6px 0'><b style='font-size:12px'>")
+        .append(htmlEscape(siteName))
+        .append("</b></p>");
 
     // Description
     if (config.getDescription() != null && !config.getDescription().isEmpty()) {
-      Box descRow = Box.createHorizontalBox();
-      JLabel desc =
-          new JLabel("<html>" + config.getDescription().replace("\n", "<br>") + "</html>");
-      desc.setAlignmentX(Component.LEFT_ALIGNMENT);
-      descRow.add(desc);
-      descRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-      configContentPanel.add(descRow);
-      configContentPanel.add(Box.createVerticalStrut(6));
+      sb.append("<p style='margin:0 0 6px 0'>")
+          .append(htmlEscape(config.getDescription()).replace("\n", "<br>"))
+          .append("</p>");
     }
 
     // Net containment volume
     Containment containment = config.getContainment();
     if (containment != null && containment.getNetVolume_m3() != null) {
-      Box row = Box.createHorizontalBox();
-      row.add(
-          new JLabel(
-              "Net containment volume: " + formatDecimal(containment.getNetVolume_m3()) + " m³"));
-      row.setAlignmentX(Component.LEFT_ALIGNMENT);
-      configContentPanel.add(row);
-      configContentPanel.add(Box.createVerticalStrut(2));
+      sb.append("<p style='margin:0 0 2px 0'>Net containment volume: ")
+          .append(htmlEscape(formatDecimal(containment.getNetVolume_m3())))
+          .append(" m³</p>");
     }
 
     // Maximum over pressure, Allowed leakage
     DesignPressure design = config.getDesignPressure();
     if (design != null) {
-      if (design.getOverpressure_Pa() != null) {
-        Box row = Box.createHorizontalBox();
-        row.add(
-            new JLabel(
-                "Maximum over pressure: " + formatDecimal(design.getOverpressure_Pa()) + " Pa"));
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        configContentPanel.add(row);
-        configContentPanel.add(Box.createVerticalStrut(2));
+      if (design.getOverpressure_bar() != null) {
+        sb.append("<p style='margin:0 0 2px 0'>Maximum over pressure: ")
+            .append(htmlEscape(formatDecimal(design.getOverpressure_bar())))
+            .append(" bar</p>");
       }
       if (design.getLeakLimit_percent_per_day() != null) {
-        Box row = Box.createHorizontalBox();
-        row.add(
-            new JLabel(
-                "Allowed leakage: " + formatDecimal(design.getLeakLimit_percent_per_day()) + " %"));
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        configContentPanel.add(row);
-        configContentPanel.add(Box.createVerticalStrut(4));
+        sb.append("<p style='margin:0 0 2px 0'>Allowed leakage: ")
+            .append(htmlEscape(formatDecimal(design.getLeakLimit_percent_per_day())))
+            .append(" %</p>");
       }
     }
+    sb.append("<p style='margin:4px 0 0 0'></p>");
 
     List<SensorConfig> sensors = config.getSensors() != null ? config.getSensors() : List.of();
     List<PressureSensorConfig> pressureSensors = new ArrayList<>();
@@ -183,21 +167,17 @@ class SiteSelectionStepPanel extends JPanel {
       else if (s instanceof HumiditySensorConfig) humiditySensors.add((HumiditySensorConfig) s);
     }
 
-    // Pressure sensors
+    // Pressure sensors (space between each sensor)
     if (!pressureSensors.isEmpty()) {
-      JLabel sectionLabel = new JLabel("Pressure sensors (total: " + pressureSensors.size() + ")");
-      sectionLabel.setFont(sectionLabel.getFont().deriveFont(Font.BOLD));
-      sectionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-      configContentPanel.add(sectionLabel);
-      configContentPanel.add(Box.createVerticalStrut(2));
+      sb.append("<p style='margin:0 0 2px 0'><b>Pressure sensors (total: ")
+          .append(pressureSensors.size())
+          .append(")</b></p>");
       for (PressureSensorConfig p : pressureSensors) {
-        Box row = Box.createHorizontalBox();
-        row.add(
-            new JLabel("  " + formatSensorLine(p.getId(), p.getDescription(), p.getSigma(), null)));
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        configContentPanel.add(row);
+        sb.append("<p style='margin:0 0 6px 12px'>")
+            .append(htmlEscape(formatSensorLine(p.getId(), p.getDescription(), p.getSigma(), null)))
+            .append("</p>");
       }
-      configContentPanel.add(Box.createVerticalStrut(4));
+      sb.append("<p style='margin:4px 0 0 0'></p>");
     }
 
     // Temperature sensors (with attached humidity if any)
@@ -211,36 +191,37 @@ class SiteSelectionStepPanel extends JPanel {
           }
         }
       }
-      String tempHeader =
-          "Temperature sensors (total: "
-              + temperatureSensors.size()
-              + ", "
-              + withHumidity
-              + " with humidity sensors)";
-      JLabel sectionLabel = new JLabel(tempHeader);
-      sectionLabel.setFont(sectionLabel.getFont().deriveFont(Font.BOLD));
-      sectionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-      configContentPanel.add(sectionLabel);
-      configContentPanel.add(Box.createVerticalStrut(2));
+      sb.append("<p style='margin:0 0 2px 0'><b>Temperature sensors (total: ")
+          .append(temperatureSensors.size())
+          .append(", ")
+          .append(withHumidity)
+          .append(" with humidity sensors)</b></p>");
       for (TemperatureSensorConfig t : temperatureSensors) {
-        Box tempRow = Box.createHorizontalBox();
-        tempRow.add(new JLabel("  " + formatTempLine(t)));
-        tempRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        configContentPanel.add(tempRow);
+        // Space above each temp+humidity group; no extra space before attached humidity
+        sb.append("<p style='margin:6px 0 0 12px'>")
+            .append(htmlEscape(formatTempLine(t)))
+            .append("</p>");
         for (HumiditySensorConfig h : humiditySensors) {
           if (t.getId() != null && t.getId().equals(h.getPairedTemperatureSensor())) {
-            Box humRow = Box.createHorizontalBox();
-            humRow.add(new JLabel("    Humidity: " + formatHumidityLine(h)));
-            humRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-            configContentPanel.add(humRow);
+            sb.append("<p style='margin:0 0 0 24px'>Humidity: ")
+                .append(htmlEscape(formatHumidityLine(h)))
+                .append("</p>");
           }
         }
       }
-      configContentPanel.add(Box.createVerticalStrut(4));
     }
 
-    configContentPanel.revalidate();
-    configContentPanel.repaint();
+    sb.append(HTML_BODY_END);
+    configEditor.setText(sb.toString());
+    configEditor.setCaretPosition(0);
+  }
+
+  private static String htmlEscape(String s) {
+    if (s == null) return "";
+    return s.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;");
   }
 
   private static String formatDecimal(BigDecimal value) {
@@ -299,18 +280,19 @@ class SiteSelectionStepPanel extends JPanel {
   }
 
   private void chooseSiteConfig() {
+    var step = wizardViewModel.getSiteSelectionStep();
     JFileChooser chooser = new JFileChooser();
-    File current = viewModel.getSelectedFile();
+    File current = step.getSelectedFile();
     if (current != null && current.getParentFile() != null) {
       chooser.setCurrentDirectory(current.getParentFile());
     } else {
-      File root = viewModel.getRootDirectory();
+      File root = step.getRootDirectory();
       if (root != null && root.isDirectory()) {
         chooser.setCurrentDirectory(root);
       }
     }
     if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-      viewModel.setSelectedFile(chooser.getSelectedFile());
+      step.setSelectedFile(chooser.getSelectedFile());
       updateFromViewModel();
     }
   }

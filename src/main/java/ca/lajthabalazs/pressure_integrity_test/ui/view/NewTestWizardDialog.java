@@ -1,5 +1,6 @@
 package ca.lajthabalazs.pressure_integrity_test.ui.view;
 
+import ca.lajthabalazs.pressure_integrity_test.ui.UIColors;
 import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.NewTestWizardViewModel;
 import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.WizardStep;
 import java.awt.BorderLayout;
@@ -71,11 +72,14 @@ public class NewTestWizardDialog extends JDialog {
     stepContentPanel.setBackground(Color.WHITE);
     stepContentPanel.add(contentPanel, BorderLayout.CENTER);
 
-    JPanel finalizePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+    JPanel finalizePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
     finalizePanel.setBackground(Color.WHITE);
     finalizeButton = new JButton("Finalize");
+    finalizeButton.setBackground(UIColors.PRIMARY_BUTTON_BACKGROUND);
+    finalizeButton.setForeground(UIColors.PRIMARY_BUTTON_FOREGROUND);
+    finalizeButton.setOpaque(true);
     finalizeButton.addActionListener(e -> onFinalize());
-    openForEditingButton = new JButton("Open for editing");
+    openForEditingButton = new JButton("Change");
     openForEditingButton.addActionListener(e -> onOpenForEditing());
     finalizePanel.add(finalizeButton);
     finalizePanel.add(openForEditingButton);
@@ -92,6 +96,9 @@ public class NewTestWizardDialog extends JDialog {
     nextButton = new JButton("Next →");
     nextButton.addActionListener(e -> viewModel.goToNextStep());
     startButton = new JButton("Start test");
+    startButton.setBackground(UIColors.PRIMARY_BUTTON_BACKGROUND);
+    startButton.setForeground(UIColors.PRIMARY_BUTTON_FOREGROUND);
+    startButton.setOpaque(true);
     startButton.addActionListener(e -> onStart());
     cancelButton = new JButton("Cancel");
     cancelButton.addActionListener(e -> dispose());

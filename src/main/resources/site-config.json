@@ -5,7 +5,7 @@
     "netVolume_m3": 52000
   },
   "designPressure": {
-    "overpressure_Pa": 150000,
+    "overpressure_bar": 1.5,
     "leakLimit_percent_per_day": 14.7
   },
   "sensors": [

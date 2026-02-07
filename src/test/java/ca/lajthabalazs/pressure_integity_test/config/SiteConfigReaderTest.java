@@ -30,7 +30,7 @@ public class SiteConfigReaderTest {
 
     Assertions.assertNotNull(config.getDesignPressure());
     Assertions.assertEquals(
-        0, new BigDecimal("150000").compareTo(config.getDesignPressure().getOverpressure_Pa()));
+        0, new BigDecimal("1.5").compareTo(config.getDesignPressure().getOverpressure_bar()));
     Assertions.assertEquals(
         0,
         new BigDecimal("14.7")

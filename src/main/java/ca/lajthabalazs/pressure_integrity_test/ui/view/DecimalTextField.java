@@ -14,7 +14,7 @@ import javax.swing.event.DocumentListener;
  * A JTextField for numeric input. When {@code allowDecimals} is true, accepts digits and decimal
  * separator (comma or dot). Dot is displayed as comma. When {@code allowDecimals} is false, accepts
  * only digits (integer mode). Shows a red triangle in the top-right corner when the value cannot be
- * parsed.
+ * parsed or is out of the optional valid range.
  */
 public class DecimalTextField extends JTextField {
 
@@ -24,6 +24,8 @@ public class DecimalTextField extends JTextField {
 
   private final boolean allowDecimals;
   private boolean invalid;
+  private Double minValue;
+  private Double maxValue;
 
   public DecimalTextField(String text, int columns, boolean allowDecimals) {
     super(
@@ -32,6 +34,7 @@ public class DecimalTextField extends JTextField {
     this.allowDecimals = allowDecimals;
     setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UNDERLINE_COLOR));
     setBackground(Color.WHITE);
+    setHorizontalAlignment(JTextField.CENTER);
     getDocument()
         .addDocumentListener(
             new DocumentListener() {
@@ -77,7 +80,7 @@ public class DecimalTextField extends JTextField {
 
   private void validateValue() {
     boolean wasInvalid = invalid;
-    invalid = !isEmpty() && !canParse();
+    invalid = isEmpty() || !canParse() || isOutOfRange();
     if (invalid != wasInvalid) {
       repaint();
     }
@@ -98,6 +101,37 @@ public class DecimalTextField extends JTextField {
     } catch (NumberFormatException e) {
       return false;
     }
+  }
+
+  private boolean isOutOfRange() {
+    if (isEmpty() || !canParse()) {
+      return false;
+    }
+    try {
+      if (allowDecimals) {
+        double val = Double.parseDouble(getValueForParsing());
+        if (minValue != null && val < minValue) return true;
+        if (maxValue != null && val > maxValue) return true;
+      } else {
+        int val = Integer.parseInt(getText().trim());
+        if (minValue != null && val < minValue.intValue()) return true;
+        if (maxValue != null && val > maxValue.intValue()) return true;
+      }
+    } catch (NumberFormatException e) {
+      return false;
+    }
+    return false;
+  }
+
+  /**
+   * Sets the valid range for the value. When set, the red triangle is shown when the parsed value
+   * is below min or above max. When null, no range check is applied. Triggers immediate
+   * re-validation.
+   */
+  public void setValidRange(Double min, Double max) {
+    this.minValue = min;
+    this.maxValue = max;
+    validateValue();
   }
 
   /**
