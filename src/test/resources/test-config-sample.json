@@ -1,0 +1,11 @@
+{
+  "id": "2026-05-TITV",
+  "type": "TITV",
+  "stages": [
+    {"overpressure": {"value": 0.2, "unit": "bar"}, "duration": {"hours": 6, "minutes": 0}},
+    {"overpressure": {"value": 0.7, "unit": "bar"}, "duration": {"hours": 2, "minutes": 0}},
+    {"overpressure": {"value": 1.5, "unit": "bar"}, "duration": {"hours": 1, "minutes": 0}}
+  ],
+  "ambientPressure": {"value": 101000, "unit": "Pa"},
+  "description": "Containment absolute pressure sensor A"
+}
