@@ -14,6 +14,7 @@ import javax.swing.JTextArea;
 class DataInterfaceStepPanel extends JPanel {
 
   private final NewTestWizardViewModel wizardViewModel;
+  private final FileChooserPanel fileChooserPanel;
   private final JTextArea textArea;
   private boolean isUpdatingFromViewModel;
 
@@ -26,10 +27,27 @@ class DataInterfaceStepPanel extends JPanel {
     gbc.anchor = GridBagConstraints.NORTHWEST;
     gbc.fill = GridBagConstraints.BOTH;
     gbc.weightx = 1;
+    gbc.weighty = 0;
+
+    var step = wizardViewModel.getDataInterfaceStep();
+    fileChooserPanel =
+        new FileChooserPanel(
+            "Choose test output folder",
+            step::getRootDirectory,
+            file -> {
+              step.setSelectedFile(file);
+              updateFromViewModel();
+            },
+            new EmptyFolderFilter(),
+            true);
+    add(fileChooserPanel, gbc);
+
+    gbc.gridy = 1;
+    gbc.weighty = 0;
+    add(new JLabel("Local settings configuration:"), gbc);
+
+    gbc.gridy = 2;
     gbc.weighty = 1;
-
-    add(new JLabel("Data interface configuration:"), gbc);
-
     textArea = new JTextArea(10, 40);
     textArea.setBackground(Color.WHITE);
     textArea.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xcccccc)));
@@ -54,7 +72,6 @@ class DataInterfaceStepPanel extends JPanel {
                 syncToViewModel();
               }
             });
-    gbc.gridy = 1;
     add(new JScrollPane(textArea), gbc);
 
     updateFromViewModel();
@@ -67,11 +84,14 @@ class DataInterfaceStepPanel extends JPanel {
   }
 
   void setEditable(boolean editable) {
+    fileChooserPanel.setEditable(editable);
     textArea.setEditable(editable);
   }
 
   void updateFromViewModel() {
-    String text = wizardViewModel.getDataInterfaceStep().getDataInterfaceText();
+    var step = wizardViewModel.getDataInterfaceStep();
+    fileChooserPanel.setDisplayedFile(step.getSelectedFile());
+    String text = step.getDataInterfaceText();
     javax.swing.SwingUtilities.invokeLater(
         () -> {
           if (text.equals(textArea.getText())) {

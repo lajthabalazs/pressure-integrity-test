@@ -1,9 +1,10 @@
 package ca.lajthabalazs.pressure_integrity_test.ui.viewmodel;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-/** View model for the data interface step (step 3) of the new test wizard. */
+/** View model for the Local settings step (step 3) of the new test wizard. */
 public class DataInterfaceStepViewModel {
 
   public interface Listener {
@@ -12,6 +13,7 @@ public class DataInterfaceStepViewModel {
 
   private final List<Listener> listeners = new ArrayList<>();
 
+  private File selectedFile;
   private String dataInterfaceText = "";
   private boolean finalized;
 
@@ -27,6 +29,22 @@ public class DataInterfaceStepViewModel {
     for (Listener listener : listeners) {
       listener.onStateChanged();
     }
+  }
+
+  public File getRootDirectory() {
+    if (selectedFile != null && selectedFile.getParentFile() != null) {
+      return selectedFile.getParentFile();
+    }
+    return new File(System.getProperty("user.dir"));
+  }
+
+  public File getSelectedFile() {
+    return selectedFile;
+  }
+
+  public void setSelectedFile(File file) {
+    this.selectedFile = file;
+    notifyListeners();
   }
 
   public String getDataInterfaceText() {

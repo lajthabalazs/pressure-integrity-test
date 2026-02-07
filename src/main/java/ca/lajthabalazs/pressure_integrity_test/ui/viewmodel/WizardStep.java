@@ -3,7 +3,7 @@ package ca.lajthabalazs.pressure_integrity_test.ui.viewmodel;
 public enum WizardStep {
   SITE_SELECTION("Site Selection"),
   TEST_TYPE("Test Type"),
-  DATA_INTERFACE("Data Interface");
+  DATA_INTERFACE("Local settings");
 
   private final String displayName;
 

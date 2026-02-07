@@ -11,21 +11,16 @@ import ca.lajthabalazs.pressure_integrity_test.config.ValidRange;
 import ca.lajthabalazs.pressure_integrity_test.ui.viewmodel.NewTestWizardViewModel;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.io.File;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JEditorPane;
-import javax.swing.JFileChooser;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 class SiteSelectionStepPanel extends JPanel {
 
@@ -34,8 +29,7 @@ class SiteSelectionStepPanel extends JPanel {
   private static final String HTML_BODY_END = "</body></html>";
 
   private final NewTestWizardViewModel wizardViewModel;
-  private final JLabel filePathLabel;
-  private final JButton chooseButton;
+  private final FileChooserPanel fileChooserPanel;
   private final JScrollPane configScrollPane;
   private final JEditorPane configEditor;
 
@@ -46,25 +40,24 @@ class SiteSelectionStepPanel extends JPanel {
     setBackground(Color.WHITE);
     setLayout(new BorderLayout());
 
-    JPanel fileChooserPanel = new JPanel();
-    fileChooserPanel.setLayout(new BoxLayout(fileChooserPanel, BoxLayout.Y_AXIS));
-
-    chooseButton = new JButton("Choose site config");
-    chooseButton.addActionListener(e -> chooseSiteConfig());
-    chooseButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-    fileChooserPanel.add(chooseButton);
-
-    fileChooserPanel.add(Box.createVerticalStrut(5));
-
-    filePathLabel = new JLabel();
-    filePathLabel.setForeground(new Color(0x666666));
-    filePathLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-    fileChooserPanel.add(filePathLabel);
-
-    fileChooserPanel.add(Box.createVerticalStrut(10));
-    fileChooserPanel.setBackground(Color.WHITE);
-    fileChooserPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
+    fileChooserPanel =
+        new FileChooserPanel(
+            "Choose site config",
+            () -> {
+              var step = wizardViewModel.getSiteSelectionStep();
+              File current = step.getSelectedFile();
+              if (current != null && current.getParentFile() != null) {
+                return current.getParentFile();
+              }
+              File root = step.getRootDirectory();
+              return (root != null && root.isDirectory()) ? root : null;
+            },
+            file -> {
+              wizardViewModel.getSiteSelectionStep().setSelectedFile(file);
+              updateFromViewModel();
+            },
+            new FileNameExtensionFilter("JSON files", "json"),
+            false);
     this.add(fileChooserPanel, BorderLayout.NORTH);
 
     configEditor = new JEditorPane();
@@ -84,23 +77,17 @@ class SiteSelectionStepPanel extends JPanel {
   }
 
   void setEditable(boolean editable) {
-    chooseButton.setEnabled(editable);
+    fileChooserPanel.setEditable(editable);
   }
 
   void updateFromViewModel() {
     var step = wizardViewModel.getSiteSelectionStep();
-    File file = step.getSelectedFile();
-    if (file != null) {
-      filePathLabel.setText(file.getAbsolutePath());
-      filePathLabel.setVisible(true);
-    } else {
-      filePathLabel.setText("");
-      filePathLabel.setVisible(false);
-    }
+    fileChooserPanel.setDisplayedFile(step.getSelectedFile());
 
     SiteConfig config = step.getSiteConfig();
     String loadError = step.getSiteConfigLoadError();
-    configScrollPane.setVisible(config != null || (loadError != null && file != null));
+    configScrollPane.setVisible(
+        config != null || (loadError != null && step.getSelectedFile() != null));
     rebuildConfigContent(config, loadError);
   }
 
@@ -277,23 +264,5 @@ class SiteSelectionStepPanel extends JPanel {
     sb.append(", sigma ");
     sb.append(formatDecimal(h.getSigma()));
     return sb.toString();
-  }
-
-  private void chooseSiteConfig() {
-    var step = wizardViewModel.getSiteSelectionStep();
-    JFileChooser chooser = new JFileChooser();
-    File current = step.getSelectedFile();
-    if (current != null && current.getParentFile() != null) {
-      chooser.setCurrentDirectory(current.getParentFile());
-    } else {
-      File root = step.getRootDirectory();
-      if (root != null && root.isDirectory()) {
-        chooser.setCurrentDirectory(root);
-      }
-    }
-    if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-      step.setSelectedFile(chooser.getSelectedFile());
-      updateFromViewModel();
-    }
   }
 }
