@@ -4,8 +4,9 @@ import ca.lajthabalazs.pressure_integity_test.io.ResourceTextFileReader;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
-import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementPlaybackStream;
-import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorPlaybackStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +20,17 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class MeasurementPlaybackStreamTest {
+/** Tests for {@link MeasurementVectorPlaybackStream}. */
+public class MeasurementVectorPlaybackStreamTest {
+
+  /**
+   * Converts a list of measurements into a list of single-element MeasurementVectors for playback.
+   */
+  private static List<MeasurementVector> vectorsOf(List<Measurement> measurements) {
+    return measurements.stream()
+        .map(m -> new MeasurementVector(m.getTimeUtc(), List.of(m)))
+        .toList();
+  }
 
   // Time tolerance constants (in milliseconds)
   private static final long ARRIVAL_TIME_TOLERANCE_MS = 20;
@@ -27,7 +38,7 @@ public class MeasurementPlaybackStreamTest {
   private static final long MAX_ALLOWED_OUTLIERS = 2;
   private static final long MAX_DELAY_MS = 50;
 
-  private MeasurementPlaybackStream playbackStream;
+  private MeasurementVectorPlaybackStream playbackStream;
   private boolean gcWasDisabled;
 
   @BeforeEach
@@ -70,15 +81,17 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void subscribe_andPublish_receivesMeasurement() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
 
-    MeasurementStream.Subscription subscription = playbackStream.subscribe(received::add);
+    MeasurementVectorStream.Subscription subscription =
+        playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
 
     Humidity testMeasurement = new Humidity(1000L, "H1", new BigDecimal("50"));
 
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(List.of(testMeasurement), startTime);
+    playbackStream.startPlayback(
+        List.of(new MeasurementVector(1000L, List.of(testMeasurement))), startTime);
 
     Thread.sleep(100); // Give handler time to execute
 
@@ -95,14 +108,13 @@ public class MeasurementPlaybackStreamTest {
   public void startPlayback_preservesTimeDeltas() throws Exception {
     disableGarbageCollection();
     try {
-      playbackStream = new MeasurementPlaybackStream();
+      playbackStream = new MeasurementVectorPlaybackStream();
       List<Measurement> received = new ArrayList<>();
       List<Long> receiveTimesMillis = new ArrayList<>();
-      long startNanoTime = System.nanoTime();
 
       playbackStream.subscribe(
-          measurement -> {
-            received.add(measurement);
+          vector -> {
+            received.addAll(vector.getMeasurements());
             receiveTimesMillis.add(System.currentTimeMillis());
           });
 
@@ -114,7 +126,7 @@ public class MeasurementPlaybackStreamTest {
       measurements.add(new Humidity(baseTime + 200, "H1", new BigDecimal("45.8")));
 
       long startTime = System.currentTimeMillis();
-      playbackStream.startPlayback(measurements, startTime);
+      playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
       // Wait for all measurements to be published (3 measurements, last one at +200ms = ~300ms
       // total)
@@ -189,18 +201,18 @@ public class MeasurementPlaybackStreamTest {
   public void startPlayback_fromResourceFile() throws Exception {
     disableGarbageCollection();
     try {
-      playbackStream = new MeasurementPlaybackStream();
+      playbackStream = new MeasurementVectorPlaybackStream();
       List<Measurement> received = new ArrayList<>();
       List<Long> receiveTimesMillis = new ArrayList<>();
 
       playbackStream.subscribe(
-          measurement -> {
-            received.add(measurement);
+          vector -> {
+            received.addAll(vector.getMeasurements());
             receiveTimesMillis.add(System.currentTimeMillis());
           });
 
       // Load measurements from resource file
-      TextFileReader reader = new ResourceTextFileReader(MeasurementPlaybackStreamTest.class);
+      TextFileReader reader = new ResourceTextFileReader(MeasurementVectorPlaybackStreamTest.class);
       List<String> lines = reader.readAllLines("/sample-humidity-measurements.csv");
 
       // Skip header line
@@ -215,7 +227,7 @@ public class MeasurementPlaybackStreamTest {
       }
 
       long startTime = System.currentTimeMillis();
-      playbackStream.startPlayback(measurements, startTime);
+      playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
       // Wait for all measurements (20 measurements, last one at +1900ms = ~2000ms total)
       Thread.sleep(2100);
@@ -328,34 +340,107 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void startPlayback_whenAlreadyPlaying_throwsException() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> measurements = new ArrayList<>();
     measurements.add(new Humidity(1000L, "H1", new BigDecimal("50")));
     measurements.add(new Humidity(1100L, "H1", new BigDecimal("51")));
 
     long startTime1 = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime1);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime1);
     Thread.sleep(50); // Small delay to ensure isPlaying is set
 
     long startTime2 = System.currentTimeMillis();
     Assertions.assertThrows(
-        IllegalStateException.class, () -> playbackStream.startPlayback(measurements, startTime2));
+        IllegalStateException.class,
+        () -> playbackStream.startPlayback(vectorsOf(measurements), startTime2));
   }
 
   @Test
   public void scheduler_cannotBeStartedTwice() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> measurements = new ArrayList<>();
     measurements.add(new Humidity(1000L, "H1", new BigDecimal("50")));
 
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
     // Try to start the scheduler again immediately
     Assertions.assertThrows(
         IllegalStateException.class,
-        () -> playbackStream.startPlayback(measurements, startTime),
+        () -> playbackStream.startPlayback(vectorsOf(measurements), startTime),
         "Scheduler should not be able to start twice");
+  }
+
+  @Test
+  public void startPlayback_nullVectors_throwsIllegalArgumentException() {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    long startTime = System.currentTimeMillis();
+
+    IllegalArgumentException thrown =
+        Assertions.assertThrows(
+            IllegalArgumentException.class, () -> playbackStream.startPlayback(null, startTime));
+
+    Assertions.assertTrue(
+        thrown.getMessage().contains("non-empty"),
+        "Message should mention non-empty: " + thrown.getMessage());
+  }
+
+  @Test
+  public void startPlayback_emptyVectors_throwsIllegalArgumentException() {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    long startTime = System.currentTimeMillis();
+
+    IllegalArgumentException thrown =
+        Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> playbackStream.startPlayback(List.of(), startTime));
+
+    Assertions.assertTrue(
+        thrown.getMessage().contains("non-empty"),
+        "Message should mention non-empty: " + thrown.getMessage());
+  }
+
+  @Test
+  public void startPlayback_vectorWithNullElement_throwsIllegalArgumentException() {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    Measurement m = new Humidity(1000L, "H1", new BigDecimal("50"));
+    long startTime = System.currentTimeMillis();
+
+    List<MeasurementVector> vectorsWithNull = new ArrayList<>();
+    vectorsWithNull.add(new MeasurementVector(1000L, List.of(m)));
+    vectorsWithNull.add(null);
+    vectorsWithNull.add(new MeasurementVector(1000L, List.of(m)));
+
+    IllegalArgumentException thrown =
+        Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> playbackStream.startPlayback(vectorsWithNull, startTime));
+
+    Assertions.assertTrue(
+        thrown.getMessage().contains("non-empty measurements"),
+        "Message should mention non-empty measurements: " + thrown.getMessage());
+  }
+
+  @Test
+  public void startPlayback_vectorWithEmptyMeasurements_throwsIllegalArgumentException() {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    Measurement m = new Humidity(1000L, "H1", new BigDecimal("50"));
+    long startTime = System.currentTimeMillis();
+
+    List<MeasurementVector> vectorsWithEmpty =
+        List.of(
+            new MeasurementVector(1000L, List.of(m)),
+            new MeasurementVector(1000L, List.of()),
+            new MeasurementVector(1000L, List.of(m)));
+
+    IllegalArgumentException thrown =
+        Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> playbackStream.startPlayback(vectorsWithEmpty, startTime));
+
+    Assertions.assertTrue(
+        thrown.getMessage().contains("non-empty measurements"),
+        "Message should mention non-empty measurements: " + thrown.getMessage());
   }
 
   @Test
@@ -371,7 +456,7 @@ public class MeasurementPlaybackStreamTest {
         },
         0,
         TimeUnit.MILLISECONDS);
-    playbackStream = new MeasurementPlaybackStream(executor, 50);
+    playbackStream = new MeasurementVectorPlaybackStream(executor, 50);
     Thread.sleep(20);
 
     playbackStream.shutdown();
@@ -380,7 +465,9 @@ public class MeasurementPlaybackStreamTest {
         RejectedExecutionException.class,
         () ->
             playbackStream.startPlayback(
-                List.of(new Humidity(1000L, "H1", new BigDecimal("50"))),
+                List.of(
+                    new MeasurementVector(
+                        1000L, List.of(new Humidity(1000L, "H1", new BigDecimal("50"))))),
                 System.currentTimeMillis()));
   }
 
@@ -398,7 +485,7 @@ public class MeasurementPlaybackStreamTest {
         },
         0,
         TimeUnit.MILLISECONDS);
-    playbackStream = new MeasurementPlaybackStream(executor, 5000);
+    playbackStream = new MeasurementVectorPlaybackStream(executor, 5000);
 
     AtomicBoolean shutdownCompleted = new AtomicBoolean(false);
     Thread shutdownThread =
@@ -418,16 +505,18 @@ public class MeasurementPlaybackStreamTest {
         RejectedExecutionException.class,
         () ->
             playbackStream.startPlayback(
-                List.of(new Humidity(2000L, "H1", new BigDecimal("51"))),
+                List.of(
+                    new MeasurementVector(
+                        2000L, List.of(new Humidity(2000L, "H1", new BigDecimal("51"))))),
                 System.currentTimeMillis()));
   }
 
   @Test
   public void stopPlayback_cancelsScheduledTasks() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
 
-    playbackStream.subscribe(measurement -> received.add(measurement));
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
 
     long baseTime = 1000000L;
     List<Measurement> measurements = new ArrayList<>();
@@ -435,7 +524,7 @@ public class MeasurementPlaybackStreamTest {
     measurements.add(new Humidity(baseTime + 100, "H1", new BigDecimal("45.5")));
 
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
     Thread.sleep(50); // Let first measurement publish
 
     playbackStream.stopPlayback();
@@ -448,13 +537,13 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void isPlaying_reflectsPlaybackState() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> measurements = new ArrayList<>();
     measurements.add(new Humidity(1000L, "H1", new BigDecimal("50")));
     measurements.add(new Humidity(1100L, "H1", new BigDecimal("51")));
 
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
     Thread.sleep(50); // Small delay to ensure isPlaying is set
 
     Thread.sleep(
@@ -465,13 +554,13 @@ public class MeasurementPlaybackStreamTest {
   public void startPlayback_whenMessagesComeFast_delayBecomesZero() throws Exception {
     disableGarbageCollection();
     try {
-      playbackStream = new MeasurementPlaybackStream();
+      playbackStream = new MeasurementVectorPlaybackStream();
       List<Measurement> received = new ArrayList<>();
       List<Long> receiveTimesMillis = new ArrayList<>();
 
       playbackStream.subscribe(
-          measurement -> {
-            received.add(measurement);
+          vector -> {
+            received.addAll(vector.getMeasurements());
             receiveTimesMillis.add(System.currentTimeMillis());
           });
 
@@ -488,7 +577,7 @@ public class MeasurementPlaybackStreamTest {
       }
 
       long startTime = System.currentTimeMillis();
-      playbackStream.startPlayback(measurements, startTime);
+      playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
       // Wait for all measurements to be published
       // Since they're 1ms apart, total duration is ~49ms, but allow extra time
@@ -538,7 +627,7 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void playback_withSpeedFactor2x_deliversFasterButPreservesTimestamps() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     playbackStream.setSpeed(2.0);
     List<Measurement> received = new ArrayList<>();
     List<Long> receiveTimesMillis = new ArrayList<>();
@@ -550,12 +639,12 @@ public class MeasurementPlaybackStreamTest {
             new Humidity(baseTime + 400, "H1", new BigDecimal("45.4")));
 
     playbackStream.subscribe(
-        m -> {
-          received.add(m);
+        vector -> {
+          received.addAll(vector.getMeasurements());
           receiveTimesMillis.add(System.currentTimeMillis());
         });
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
     Thread.sleep(250); // At 2x, 400ms of content takes ~200ms real time
 
@@ -575,7 +664,7 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void playback_withSpeedFactorHalf_deliversSlowerButPreservesTimestamps() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     playbackStream.setSpeed(0.5);
     List<Measurement> received = new ArrayList<>();
     long baseTime = 1000000L;
@@ -584,9 +673,9 @@ public class MeasurementPlaybackStreamTest {
             new Humidity(baseTime, "H1", new BigDecimal("45.0")),
             new Humidity(baseTime + 100, "H1", new BigDecimal("45.1")));
 
-    playbackStream.subscribe(received::add);
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
     Thread.sleep(150); // At 0.5x, 100ms delta = 200ms real; first is immediate
     Assertions.assertEquals(1, received.size());
@@ -598,7 +687,7 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void setSpeed_duringPlayback_reschedulesAndDoesNotLoseMessages() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
     long baseTime = 1000000L;
     List<Measurement> measurements = new ArrayList<>();
@@ -606,9 +695,9 @@ public class MeasurementPlaybackStreamTest {
       measurements.add(new Humidity(baseTime + i * 100L, "H1", new BigDecimal("45." + i)));
     }
 
-    playbackStream.subscribe(received::add);
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
     Thread.sleep(80); // Let first one and maybe second be delivered
     playbackStream.setSpeed(4.0); // Speed up remainder
@@ -628,7 +717,7 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void setSpeed_invalidFactor_throws() {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     Assertions.assertThrows(IllegalArgumentException.class, () -> playbackStream.setSpeed(0));
     Assertions.assertThrows(IllegalArgumentException.class, () -> playbackStream.setSpeed(-1));
     Assertions.assertThrows(
@@ -640,7 +729,7 @@ public class MeasurementPlaybackStreamTest {
   @Test
   public void startPlayback_withOriginalTimestamps_publishesMeasurementsWithUnchangedTimestamps()
       throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
     long baseTime = 1000000L;
     List<Measurement> measurements =
@@ -648,9 +737,9 @@ public class MeasurementPlaybackStreamTest {
             new Humidity(baseTime, "H1", new BigDecimal("45.0")),
             new Humidity(baseTime + 200, "H1", new BigDecimal("45.2")));
 
-    playbackStream.subscribe(received::add);
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
     long ignoredStartTime = 999999L; // Should not affect timestamps when useOriginalTimestamps=true
-    playbackStream.startPlayback(measurements, ignoredStartTime, true);
+    playbackStream.startPlayback(vectorsOf(measurements), ignoredStartTime, true);
 
     Thread.sleep(250);
     Assertions.assertEquals(2, received.size());
@@ -660,7 +749,7 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void startPlayback_withUpdatedTimestamps_anchorsToStartTime() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
     long baseTime = 1000000L;
     List<Measurement> measurements =
@@ -668,9 +757,9 @@ public class MeasurementPlaybackStreamTest {
             new Humidity(baseTime, "H1", new BigDecimal("45.0")),
             new Humidity(baseTime + 300, "H1", new BigDecimal("45.3")));
 
-    playbackStream.subscribe(received::add);
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime, false);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime, false);
 
     Thread.sleep(350);
     Assertions.assertEquals(2, received.size());
@@ -681,7 +770,7 @@ public class MeasurementPlaybackStreamTest {
   @Test
   public void setSpeed_multipleChangesDuringPlayback_timestampsCorrectAndNoLostMessages()
       throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
     long baseTime = 1000000L;
     List<Measurement> measurements = new ArrayList<>();
@@ -689,9 +778,9 @@ public class MeasurementPlaybackStreamTest {
       measurements.add(new Humidity(baseTime + i * 100L, "H1", new BigDecimal("45." + i)));
     }
 
-    playbackStream.subscribe(received::add);
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
     Thread.sleep(60);
     playbackStream.setSpeed(3.0);
@@ -720,7 +809,7 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void setSpeed_afterChange_measurementValuesAndSourceIdUnchanged() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
     long baseTime = 1000000L;
     List<Measurement> measurements =
@@ -728,9 +817,9 @@ public class MeasurementPlaybackStreamTest {
             new Humidity(baseTime, "sensor-A", new BigDecimal("12.34")),
             new Humidity(baseTime + 50, "sensor-A", new BigDecimal("56.78")));
 
-    playbackStream.subscribe(received::add);
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
     Thread.sleep(20);
     playbackStream.setSpeed(10.0);
     Thread.sleep(100);
@@ -749,7 +838,7 @@ public class MeasurementPlaybackStreamTest {
   @Test
   public void setSpeed_rapidChanges_stillReceivesAllMeasurementsWithCorrectTimestamps()
       throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
     long baseTime = 1000000L;
     List<Measurement> measurements = new ArrayList<>();
@@ -757,9 +846,9 @@ public class MeasurementPlaybackStreamTest {
       measurements.add(new Humidity(baseTime + i * 150L, "H1", new BigDecimal("40." + i)));
     }
 
-    playbackStream.subscribe(received::add);
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
     long startTime = System.currentTimeMillis();
-    playbackStream.startPlayback(measurements, startTime);
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
 
     playbackStream.setSpeed(2.0);
     playbackStream.setSpeed(0.25);
@@ -783,7 +872,7 @@ public class MeasurementPlaybackStreamTest {
 
   @Test
   public void setSpeed_thenStopPlayback_noExceptionAndCleanState() throws Exception {
-    playbackStream = new MeasurementPlaybackStream();
+    playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
     long baseTime = 1000000L;
     List<Measurement> measurements =
@@ -791,15 +880,15 @@ public class MeasurementPlaybackStreamTest {
             new Humidity(baseTime, "H1", new BigDecimal("50")),
             new Humidity(baseTime + 500, "H1", new BigDecimal("51")));
 
-    playbackStream.subscribe(received::add);
-    playbackStream.startPlayback(measurements, System.currentTimeMillis());
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
+    playbackStream.startPlayback(vectorsOf(measurements), System.currentTimeMillis());
     Thread.sleep(30);
     playbackStream.setSpeed(0.1);
     Thread.sleep(50);
     playbackStream.stopPlayback();
 
     Assertions.assertDoesNotThrow(
-        () -> playbackStream.startPlayback(measurements, System.currentTimeMillis()));
+        () -> playbackStream.startPlayback(vectorsOf(measurements), System.currentTimeMillis()));
     Thread.sleep(100);
     playbackStream.stopPlayback();
     Assertions.assertTrue(received.size() >= 1, "At least first measurement received before stop");
