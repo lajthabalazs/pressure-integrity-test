@@ -24,11 +24,23 @@ public class MainWindow extends JFrame {
     startNewTestItem.addActionListener(e -> onStartNewTest());
     testMenu.add(startNewTestItem);
     menuBar.add(testMenu);
+
+    JMenu simulationMenu = new JMenu("Simulation");
+    JMenuItem loadOldFileItem = new JMenuItem("Load old file for simulation");
+    loadOldFileItem.addActionListener(e -> onLoadOldFileForSimulation());
+    simulationMenu.add(loadOldFileItem);
+    menuBar.add(simulationMenu);
+
     setJMenuBar(menuBar);
   }
 
   private void onStartNewTest() {
     NewTestWizardDialog dialog = new NewTestWizardDialog(this, rootDirectory);
+    dialog.setVisible(true);
+  }
+
+  private void onLoadOldFileForSimulation() {
+    LoadSimulationDialog dialog = new LoadSimulationDialog(this, rootDirectory);
     dialog.setVisible(true);
   }
 }
