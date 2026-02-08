@@ -38,7 +38,7 @@ public class MeasurementVectorStreamMerger extends MeasurementVectorStream {
     this.dataSubscription =
         dataStream.subscribe(
             vector -> {
-              for (Measurement m : vector.getMeasurements()) {
+              for (Measurement m : vector.getMeasurementsMap().values()) {
                 latestBySourceId.put(m.getSourceId(), m);
               }
             });

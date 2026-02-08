@@ -33,10 +33,7 @@ public class LoadSimulationDialog extends JDialog {
         new FileChooserPanel(
             "Choose .ITV file",
             () -> dir,
-            file -> {
-              selectedFile = file;
-              fileChooserPanel.setDisplayedFile(file);
-            },
+            file -> selectedFile = file,
             new FileNameExtensionFilter("ITV files", "itv", "ITV"),
             false);
     add(fileChooserPanel, BorderLayout.CENTER);

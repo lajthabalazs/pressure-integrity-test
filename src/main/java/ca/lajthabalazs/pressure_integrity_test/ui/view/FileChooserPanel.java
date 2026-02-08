@@ -57,8 +57,12 @@ public class FileChooserPanel extends JPanel {
           if (dir != null && dir.isDirectory()) {
             chooser.setCurrentDirectory(dir);
           }
-          if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION && onFileChosen != null) {
-            onFileChosen.accept(chooser.getSelectedFile());
+          if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            File selected = chooser.getSelectedFile();
+            setDisplayedFile(selected);
+            if (onFileChosen != null) {
+              onFileChosen.accept(selected);
+            }
           }
         });
     add(chooseButton);

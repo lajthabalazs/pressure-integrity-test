@@ -1,5 +1,6 @@
 package ca.lajthabalazs.pressure_integrity_test.measurement;
 
+import ca.lajthabalazs.pressure_integrity_test.config.SensorConfig;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -7,13 +8,23 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Abstract base for event-driven measurement vector streams.
  *
  * <p>Supports subscribing to measurement vector events and receiving them asynchronously. Each
- * event is a {@link MeasurementVector} (timestamp plus list of measurements). Subclasses implement
+ * event is a {@link MeasurementVector} (timestamp plus map of measurements). Subclasses implement
  * the source and call {@link #publish(MeasurementVector)} to deliver each vector to all
  * subscribers.
  */
 public abstract class MeasurementVectorStream {
 
   private final List<MeasurementVectorHandler> subscribers = new CopyOnWriteArrayList<>();
+
+  /**
+   * Returns the list of sensors as defined by the site config, in order. Subclasses that are
+   * configured with a site config should override this.
+   *
+   * @return list of sensor configs (never null; may be empty)
+   */
+  public List<SensorConfig> listSensors() {
+    return List.of();
+  }
 
   /** Returns the list of subscribed handlers. */
   public final List<MeasurementVectorHandler> getSubscribers() {

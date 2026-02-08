@@ -108,7 +108,7 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
       throw new IllegalArgumentException("vectors must be non-empty");
     }
     for (MeasurementVector v : vectors) {
-      if (v == null || v.getMeasurements() == null || v.getMeasurements().isEmpty()) {
+      if (v == null || v.getMeasurementsMap() == null || v.getMeasurementsMap().isEmpty()) {
         throw new IllegalArgumentException("Each vector must have non-empty measurements");
       }
     }
@@ -163,8 +163,8 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
               } else {
                 long refTime = vector.getTimeUtc();
                 long delta = timestampBase - refTime;
-                List<Measurement> adjusted = new ArrayList<>(vector.getMeasurements().size());
-                for (Measurement m : vector.getMeasurements()) {
+                List<Measurement> adjusted = new ArrayList<>(vector.getMeasurementsMap().size());
+                for (Measurement m : vector.getMeasurementsMap().values()) {
                   adjusted.add(m.withNewTimestamp(m.getTimeUtc() + delta));
                 }
                 toPublish = new MeasurementVector(timestampBase, adjusted);
