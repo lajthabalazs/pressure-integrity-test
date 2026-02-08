@@ -23,8 +23,8 @@ public class ItvMeasurementVectorStreamTest {
 
     stream.start();
 
-    Assertions.assertEquals(2, received.size());
-    Assertions.assertEquals(2, stream.getVectors().size());
+    Assertions.assertEquals(10, received.size());
+    Assertions.assertEquals(10, stream.getVectors().size());
     Assertions.assertEquals(received.get(0).getTimeUtc(), stream.getVectors().get(0).getTimeUtc());
     Assertions.assertEquals(received.get(1).getTimeUtc(), stream.getVectors().get(1).getTimeUtc());
 

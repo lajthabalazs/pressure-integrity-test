@@ -30,8 +30,8 @@ public class ItvFileReader {
   private static final int COL_TIME = 2;
   private static final int COL_P_MAIN = 5;
   private static final int COL_T1_START = 29;
-  private static final int COL_T_COUNT = 60;
-  private static final int COL_FI1_START = 91; // empty col 90 between T60 and fi1
+  private static final int COL_T_COUNT = 61;
+  private static final int COL_FI1_START = 91; // empty col 90 between T61 and fi1
   private static final int COL_FI_COUNT = 10;
   private static final int COL_P1 = 102; // empty col 101 between fi10 and p1
   private static final int COL_P2 = 103;

@@ -42,5 +42,9 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-### ITV data ###
-ITV/
+### Site related data ###
+src/main/resources/ITV/
+src/main/resources/site-config
+
+### Old code (excluded from version control) ###
+src/main/resources/old-code/
