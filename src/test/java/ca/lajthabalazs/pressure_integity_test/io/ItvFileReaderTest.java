@@ -21,14 +21,14 @@ public class ItvFileReaderTest {
   public void read_parsesVectorsWithHungarianTimezone() throws Exception {
     TextFileReader reader = new ResourceTextFileReader(ItvFileReaderTest.class);
     ItvFileReader itvReader = new ItvFileReader(reader);
-    List<MeasurementVector> vectors = itvReader.read("/itv-sample.ITV");
+    List<MeasurementVector> vectors = itvReader.read("/itv/itv-sample.ITV");
 
     Assertions.assertEquals(10, vectors.size());
 
-    // First row: 2026.01.25 12:00:00 in Paks (Europe/Budapest)
+    // First row: 2026.02.08 00:00:00 in Paks (Europe/Budapest) — itv-sample.ITV (formula-based)
     MeasurementVector v0 = vectors.get(0);
     ZonedDateTime expectedLocal =
-        ZonedDateTime.of(2026, 1, 25, 12, 0, 0, 0, ZoneId.of("Europe/Budapest"));
+        ZonedDateTime.of(2026, 2, 8, 0, 0, 0, 0, ZoneId.of("Europe/Budapest"));
     long expectedUtc = expectedLocal.toInstant().toEpochMilli();
     Assertions.assertEquals(expectedUtc, v0.getTimeUtc());
 
@@ -44,7 +44,7 @@ public class ItvFileReaderTest {
     Assertions.assertNotNull(pMain);
     Assertions.assertEquals(0, new BigDecimal("0.000000").compareTo(pMain.getValueInDefaultUnit()));
 
-    // Check p1, p2
+    // Check p1, p2 (formula: 100010 + line_index, 100020 + line_index; line 0)
     Measurement p1 =
         m0.stream()
             .filter(m -> "p1".equals(m.getSourceId()) && m instanceof Pressure)
@@ -52,7 +52,7 @@ public class ItvFileReaderTest {
             .orElse(null);
     Assertions.assertNotNull(p1);
     Assertions.assertEquals(
-        0, new BigDecimal("98567.000000").compareTo(p1.getValueInDefaultUnit()));
+        0, new BigDecimal("100010.000000").compareTo(p1.getValueInDefaultUnit()));
     Measurement p2 =
         m0.stream()
             .filter(m -> "p2".equals(m.getSourceId()) && m instanceof Pressure)
@@ -60,9 +60,9 @@ public class ItvFileReaderTest {
             .orElse(null);
     Assertions.assertNotNull(p2);
     Assertions.assertEquals(
-        0, new BigDecimal("98571.000000").compareTo(p2.getValueInDefaultUnit()));
+        0, new BigDecimal("100020.000000").compareTo(p2.getValueInDefaultUnit()));
 
-    // Check temperatures (61 sensors T1–T61)
+    // Check temperatures (61 sensors T1–T61; T = 20 + sensor_index/10 + line_index/100)
     long tempCount = m0.stream().filter(m -> m instanceof Temperature).count();
     Assertions.assertEquals(61, tempCount);
     Measurement t1 =
@@ -71,16 +71,16 @@ public class ItvFileReaderTest {
             .findFirst()
             .orElse(null);
     Assertions.assertNotNull(t1);
-    Assertions.assertEquals(0, new BigDecimal("22.800000").compareTo(t1.getValueInDefaultUnit()));
+    Assertions.assertEquals(0, new BigDecimal("20.100000").compareTo(t1.getValueInDefaultUnit()));
     Measurement t61 =
         m0.stream()
             .filter(m -> "T61".equals(m.getSourceId()) && m instanceof Temperature)
             .findFirst()
             .orElse(null);
     Assertions.assertNotNull(t61);
-    Assertions.assertEquals(0, new BigDecimal("23.400000").compareTo(t61.getValueInDefaultUnit()));
+    Assertions.assertEquals(0, new BigDecimal("26.100000").compareTo(t61.getValueInDefaultUnit()));
 
-    // Check humidity
+    // Check humidity (H = 40 + sensor_index + line_index/10; fi1 line 0 = 41)
     long humCount = m0.stream().filter(m -> m instanceof Humidity).count();
     Assertions.assertEquals(10, humCount);
     Measurement fi1 =
@@ -89,6 +89,6 @@ public class ItvFileReaderTest {
             .findFirst()
             .orElse(null);
     Assertions.assertNotNull(fi1);
-    Assertions.assertEquals(0, new BigDecimal("38.540000").compareTo(fi1.getValueInDefaultUnit()));
+    Assertions.assertEquals(0, new BigDecimal("41.000000").compareTo(fi1.getValueInDefaultUnit()));
   }
 }

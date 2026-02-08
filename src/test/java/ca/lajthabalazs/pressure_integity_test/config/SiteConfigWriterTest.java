@@ -18,9 +18,9 @@ public class SiteConfigWriterTest {
     SiteConfigReader reader = new SiteConfigReader(fileReader);
     SiteConfigWriter writer = new SiteConfigWriter();
 
-    SiteConfig config = reader.read("/site-config-sample.json");
+    SiteConfig config = reader.read("/site-config/site-config-sample.json");
     String written = writer.writeToString(config);
-    String expected = fileReader.readAllText("/site-config-write-expected-sample.json");
+    String expected = fileReader.readAllText("/site-config/site-config-write-expected-sample.json");
     Assertions.assertEquals(expected, written);
   }
 
@@ -30,7 +30,7 @@ public class SiteConfigWriterTest {
     SiteConfigReader reader = new SiteConfigReader(fileReader);
     SiteConfigWriter writer = new SiteConfigWriter();
 
-    SiteConfig config = reader.read("/site-config-sample.json");
+    SiteConfig config = reader.read("/site-config/site-config-sample.json");
     String written = writer.writeToString(config);
 
     // Verify decimals are written in full (no truncation)
@@ -62,9 +62,10 @@ public class SiteConfigWriterTest {
     SiteConfigReader reader = new SiteConfigReader(fileReader);
     SiteConfigWriter writer = new SiteConfigWriter();
 
-    SiteConfig config = reader.read("/site-config-empty-sensors.json");
+    SiteConfig config = reader.read("/site-config/site-config-empty-sensors.json");
     String written = writer.writeToString(config);
-    String expected = fileReader.readAllText("/site-config-write-expected-empty-sensors.json");
+    String expected =
+        fileReader.readAllText("/site-config/site-config-write-expected-empty-sensors.json");
 
     Assertions.assertEquals(expected, written);
   }

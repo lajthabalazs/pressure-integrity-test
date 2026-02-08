@@ -18,7 +18,7 @@ public class SiteConfigReaderTest {
     ResourceTextFileReader fileReader = new ResourceTextFileReader(SiteConfigReaderTest.class);
     SiteConfigReader reader = new SiteConfigReader(fileReader);
 
-    SiteConfig config = reader.read("/site-config-sample.json");
+    SiteConfig config = reader.read("/site-config/site-config-sample.json");
 
     Assertions.assertNotNull(config);
     Assertions.assertEquals("PAKS_BLOCK_2", config.getId());
@@ -72,7 +72,8 @@ public class SiteConfigReaderTest {
 
     FailedToReadFileException exception =
         Assertions.assertThrows(
-            FailedToReadFileException.class, () -> reader.read("/non-existent-site-config.json"));
+            FailedToReadFileException.class,
+            () -> reader.read("/site-config/non-existent-site-config.json"));
     Assertions.assertTrue(exception.getMessage().contains("Resource not found"));
   }
 
@@ -83,7 +84,8 @@ public class SiteConfigReaderTest {
 
     SiteConfigParseException exception =
         Assertions.assertThrows(
-            SiteConfigParseException.class, () -> reader.read("/site-config-invalid.json"));
+            SiteConfigParseException.class,
+            () -> reader.read("/site-config/site-config-invalid.json"));
     Assertions.assertTrue(
         exception.getMessage().contains("Invalid JSON")
             || exception.getMessage().contains("config"));
@@ -98,7 +100,7 @@ public class SiteConfigReaderTest {
     SiteConfigParseException exception =
         Assertions.assertThrows(
             SiteConfigParseException.class,
-            () -> reader.read("/site-config-unknown-sensor-type.json"));
+            () -> reader.read("/site-config/site-config-unknown-sensor-type.json"));
     String message = exception.getMessage();
     String causeMessage = exception.getCause() != null ? exception.getCause().getMessage() : "";
     Assertions.assertTrue(
@@ -111,7 +113,7 @@ public class SiteConfigReaderTest {
     ResourceTextFileReader fileReader = new ResourceTextFileReader(SiteConfigReaderTest.class);
     SiteConfigReader reader = new SiteConfigReader(fileReader);
 
-    SiteConfig config = reader.read("/site-config-empty-sensors.json");
+    SiteConfig config = reader.read("/site-config/site-config-empty-sensors.json");
 
     Assertions.assertNotNull(config.getSensors());
     Assertions.assertTrue(config.getSensors().isEmpty());
@@ -135,7 +137,8 @@ public class SiteConfigReaderTest {
 
     SiteConfigParseException exception =
         Assertions.assertThrows(
-            SiteConfigParseException.class, () -> reader.read("/site-config-sample.json"));
+            SiteConfigParseException.class,
+            () -> reader.read("/site-config/site-config-sample.json"));
     Assertions.assertTrue(
         exception.getMessage().contains("did not produce a site config object"),
         "Expected message about null parse result, got: " + exception.getMessage());

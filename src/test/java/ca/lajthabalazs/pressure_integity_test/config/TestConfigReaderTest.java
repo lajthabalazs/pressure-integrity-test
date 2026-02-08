@@ -21,7 +21,7 @@ public class TestConfigReaderTest {
     ResourceTextFileReader fileReader = new ResourceTextFileReader(TestConfigReaderTest.class);
     TestConfigReader reader = new TestConfigReader(fileReader);
 
-    TestConfig config = reader.read("/test-config-sample.json");
+    TestConfig config = reader.read("/test-config/test-config-sample.json");
 
     Assertions.assertNotNull(config);
     Assertions.assertEquals("2026-05-TITV", config.getId());
@@ -65,7 +65,8 @@ public class TestConfigReaderTest {
 
     FailedToReadFileException exception =
         Assertions.assertThrows(
-            FailedToReadFileException.class, () -> reader.read("/non-existent-test-config.json"));
+            FailedToReadFileException.class,
+            () -> reader.read("/test-config/non-existent-test-config.json"));
     Assertions.assertTrue(exception.getMessage().contains("Resource not found"));
   }
 
@@ -76,7 +77,8 @@ public class TestConfigReaderTest {
 
     TestConfigParseException exception =
         Assertions.assertThrows(
-            TestConfigParseException.class, () -> reader.read("/test-config-invalid.json"));
+            TestConfigParseException.class,
+            () -> reader.read("/test-config/test-config-invalid.json"));
     Assertions.assertTrue(
         exception.getMessage().contains("Invalid JSON")
             || exception.getMessage().contains("config"));
@@ -90,7 +92,8 @@ public class TestConfigReaderTest {
 
     TestConfigParseException exception =
         Assertions.assertThrows(
-            TestConfigParseException.class, () -> reader.read("/test-config-null-type.json"));
+            TestConfigParseException.class,
+            () -> reader.read("/test-config/test-config-null-type.json"));
     Assertions.assertTrue(
         exception.getMessage().contains("Test type is required"),
         "Expected message about test type required, got: " + exception.getMessage());
@@ -103,7 +106,8 @@ public class TestConfigReaderTest {
 
     TestConfigParseException exception =
         Assertions.assertThrows(
-            TestConfigParseException.class, () -> reader.read("/test-config-null-stages.json"));
+            TestConfigParseException.class,
+            () -> reader.read("/test-config/test-config-null-stages.json"));
     Assertions.assertTrue(
         exception.getMessage().contains("Stages are required"),
         "Expected message about stages required, got: " + exception.getMessage());
@@ -117,7 +121,7 @@ public class TestConfigReaderTest {
     TestConfigParseException exception =
         Assertions.assertThrows(
             TestConfigParseException.class,
-            () -> reader.read("/test-config-wrong-stage-count.json"));
+            () -> reader.read("/test-config/test-config-wrong-stage-count.json"));
     Assertions.assertTrue(
         exception.getMessage().contains("requires 3 stage(s)"),
         "Expected message about 3 stages required, got: " + exception.getMessage());
@@ -133,7 +137,8 @@ public class TestConfigReaderTest {
 
     TestConfigParseException exception =
         Assertions.assertThrows(
-            TestConfigParseException.class, () -> reader.read("/test-config-empty-stages.json"));
+            TestConfigParseException.class,
+            () -> reader.read("/test-config/test-config-empty-stages.json"));
     Assertions.assertTrue(
         exception.getMessage().contains("requires 3 stage(s)"),
         "Expected message about 3 stages required, got: " + exception.getMessage());
@@ -160,7 +165,8 @@ public class TestConfigReaderTest {
 
     TestConfigParseException exception =
         Assertions.assertThrows(
-            TestConfigParseException.class, () -> reader.read("/test-config-sample.json"));
+            TestConfigParseException.class,
+            () -> reader.read("/test-config/test-config-sample.json"));
     Assertions.assertTrue(
         exception.getMessage().contains("did not produce a test config object"),
         "Expected message about null parse result, got: " + exception.getMessage());

@@ -1,0 +1,1 @@
+{"id":"X","description":"d","containment":{"netVolume_m3":1},"designPressure":{"overpressure_bar":0.001,"leakLimit_percent_per_day":1},"sensors":[{"id":"S1","type":"unknown","units":"x","sigma":0.1,"description":"x"}]}

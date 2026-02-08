@@ -213,7 +213,7 @@ public class MeasurementVectorPlaybackStreamTest {
 
       // Load measurements from resource file
       TextFileReader reader = new ResourceTextFileReader(MeasurementVectorPlaybackStreamTest.class);
-      List<String> lines = reader.readAllLines("/sample-humidity-measurements.csv");
+      List<String> lines = reader.readAllLines("/measurement/sample-humidity-measurements.csv");
 
       // Skip header line
       List<Measurement> measurements = new ArrayList<>();

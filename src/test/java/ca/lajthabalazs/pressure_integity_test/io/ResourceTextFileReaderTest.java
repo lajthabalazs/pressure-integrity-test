@@ -11,7 +11,7 @@ public class ResourceTextFileReaderTest {
   @Test
   public void readAllLines_existingFile_returnsLines() throws Exception {
     ResourceTextFileReader reader = new ResourceTextFileReader(ResourceTextFileReaderTest.class);
-    List<String> lines = reader.readAllLines("/test-file.txt");
+    List<String> lines = reader.readAllLines("/io/test-file.txt");
     Assertions.assertNotNull(lines);
     Assertions.assertFalse(lines.isEmpty());
   }
@@ -21,7 +21,8 @@ public class ResourceTextFileReaderTest {
     ResourceTextFileReader reader = new ResourceTextFileReader(ResourceTextFileReaderTest.class);
     FailedToReadFileException exception =
         Assertions.assertThrows(
-            FailedToReadFileException.class, () -> reader.readAllLines("/non-existent-file.txt"));
+            FailedToReadFileException.class,
+            () -> reader.readAllLines("/io/non-existent-file.txt"));
     Assertions.assertTrue(exception.getMessage().contains("Resource not found"));
     Assertions.assertNull(exception.getCause());
   }
@@ -29,7 +30,7 @@ public class ResourceTextFileReaderTest {
   @Test
   public void readAllText_existingFile_returnsContent() throws Exception {
     ResourceTextFileReader reader = new ResourceTextFileReader(ResourceTextFileReaderTest.class);
-    String content = reader.readAllText("/test-file.txt");
+    String content = reader.readAllText("/io/test-file.txt");
     Assertions.assertNotNull(content);
   }
 
@@ -38,7 +39,7 @@ public class ResourceTextFileReaderTest {
     ResourceTextFileReader reader = new ResourceTextFileReader(ResourceTextFileReaderTest.class);
     FailedToReadFileException exception =
         Assertions.assertThrows(
-            FailedToReadFileException.class, () -> reader.readAllText("/non-existent-file.txt"));
+            FailedToReadFileException.class, () -> reader.readAllText("/io/non-existent-file.txt"));
     Assertions.assertTrue(exception.getMessage().contains("Resource not found"));
     Assertions.assertNull(exception.getCause());
   }
@@ -46,13 +47,13 @@ public class ResourceTextFileReaderTest {
   @Test
   public void exists_existingFile_returnsTrue() {
     ResourceTextFileReader reader = new ResourceTextFileReader(ResourceTextFileReaderTest.class);
-    Assertions.assertTrue(reader.exists("/test-file.txt"));
+    Assertions.assertTrue(reader.exists("/io/test-file.txt"));
   }
 
   @Test
   public void exists_nonExistentFile_returnsFalse() {
     ResourceTextFileReader reader = new ResourceTextFileReader(ResourceTextFileReaderTest.class);
-    Assertions.assertFalse(reader.exists("/non-existent-file.txt"));
+    Assertions.assertFalse(reader.exists("/io/non-existent-file.txt"));
   }
 
   @Test
@@ -73,14 +74,14 @@ public class ResourceTextFileReaderTest {
   @Test
   public void readAllLines_withCustomClass_usesCorrectClassLoader() throws Exception {
     ResourceTextFileReader reader = new ResourceTextFileReader(ResourceTextFileReader.class);
-    List<String> lines = reader.readAllLines("/test-file.txt");
+    List<String> lines = reader.readAllLines("/io/test-file.txt");
     Assertions.assertNotNull(lines);
   }
 
   @Test
   public void readAllLines_withDefaultConstructor_usesSelfAsClassLoader() throws Exception {
     ResourceTextFileReader reader = new ResourceTextFileReader();
-    List<String> lines = reader.readAllLines("/test-file.txt");
+    List<String> lines = reader.readAllLines("/io/test-file.txt");
     Assertions.assertNotNull(lines);
   }
 }

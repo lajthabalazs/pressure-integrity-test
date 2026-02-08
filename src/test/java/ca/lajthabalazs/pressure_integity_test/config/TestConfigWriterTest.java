@@ -18,9 +18,9 @@ public class TestConfigWriterTest {
     TestConfigReader reader = new TestConfigReader(fileReader);
     TestConfigWriter writer = new TestConfigWriter();
 
-    TestConfig config = reader.read("/test-config-sample.json");
+    TestConfig config = reader.read("/test-config/test-config-sample.json");
     String written = writer.writeToString(config);
-    String expected = fileReader.readAllText("/test-config-write-expected-sample.json");
+    String expected = fileReader.readAllText("/test-config/test-config-write-expected-sample.json");
     Assertions.assertEquals(expected, written);
   }
 
@@ -30,9 +30,9 @@ public class TestConfigWriterTest {
     TestConfigReader reader = new TestConfigReader(fileReader);
     TestConfigWriter writer = new TestConfigWriter();
 
-    TestConfig config = reader.read("/test-config-eitv.json");
+    TestConfig config = reader.read("/test-config/test-config-eitv.json");
     String written = writer.writeToString(config);
-    String expected = fileReader.readAllText("/test-config-write-expected-eitv.json");
+    String expected = fileReader.readAllText("/test-config/test-config-write-expected-eitv.json");
     Assertions.assertEquals(expected, written);
   }
 

@@ -16,7 +16,8 @@ public class ItvMeasurementVectorStreamTest {
   @Test
   public void start_dumpsAllVectorsToListeners() throws Exception {
     TextFileReader reader = new ResourceTextFileReader(ItvMeasurementVectorStreamTest.class);
-    ItvMeasurementVectorStream stream = new ItvMeasurementVectorStream(reader, "/itv-sample.ITV");
+    ItvMeasurementVectorStream stream =
+        new ItvMeasurementVectorStream(reader, "/itv/itv-sample.ITV");
 
     List<MeasurementVector> received = new ArrayList<>();
     MeasurementVectorStream.Subscription sub = stream.subscribe(vector -> received.add(vector));
