@@ -26,7 +26,7 @@ public class MainWindow extends JFrame {
     menuBar.add(testMenu);
 
     JMenu simulationMenu = new JMenu("Simulation");
-    JMenuItem loadOldFileItem = new JMenuItem("Load old file for simulation");
+    JMenuItem loadOldFileItem = new JMenuItem("Load ITV file");
     loadOldFileItem.addActionListener(e -> onLoadOldFileForSimulation());
     simulationMenu.add(loadOldFileItem);
     menuBar.add(simulationMenu);
