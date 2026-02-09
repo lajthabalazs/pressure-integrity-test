@@ -11,8 +11,10 @@ import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
+
 import java.awt.Color;
 import java.awt.Dimension;
+
 import java.awt.FlowLayout;
 import java.io.File;
 import java.nio.charset.Charset;
@@ -66,11 +68,14 @@ public class MainWindow extends JFrame {
   private final AtomicReference<MeasurementVectorPlaybackStream> currentPlaybackStream =
       new AtomicReference<>(null);
   private final JPanel simulationControlPanel;
+
   private JButton simulationPauseResumeButton;
   private final List<JButton> speedButtons = new ArrayList<>();
   private final List<Double> speedValues = new ArrayList<>();
   private volatile double currentPlaybackSpeed = 30.0;
   private Timer resumeBlinkTimer;
+
+  private final DashboardPanel dashboardPanel;
 
   public MainWindow(File rootDirectory) {
     this.rootDirectory =
@@ -98,9 +103,7 @@ public class MainWindow extends JFrame {
     // Tabbed content: Dashboard | Data
     JTabbedPane tabbedPane = new JTabbedPane();
 
-    JPanel dashboardPanel = new JPanel();
-    dashboardPanel.setBackground(Color.WHITE);
-    dashboardPanel.add(new JLabel("Dashboard"));
+    dashboardPanel = new DashboardPanel();
     tabbedPane.addTab("Dashboard", dashboardPanel);
 
     dataTableModel = new DefaultTableModel();
@@ -281,6 +284,8 @@ public class MainWindow extends JFrame {
     MeasurementVectorPlaybackStream playbackStream = new MeasurementVectorPlaybackStream();
     playbackStream.setSpeed(30.0);
     currentPlaybackStream.set(playbackStream);
+    dashboardPanel.clear();
+    dashboardPanel.subscribe(playbackStream);
     playbackStream.subscribe(
         vector -> {
           SwingUtilities.invokeLater(
