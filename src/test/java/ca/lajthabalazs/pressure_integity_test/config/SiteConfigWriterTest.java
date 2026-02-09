@@ -36,7 +36,7 @@ public class SiteConfigWriterTest {
     // Verify decimals are written in full (no truncation)
     Assertions.assertTrue(
         written.contains("0.018993"),
-        "Written JSON should contain volumeWeight 0.018993; got: " + written);
+        "Written JSON should contain volumeFactor 0.018993; got: " + written);
     Assertions.assertTrue(
         written.contains("\"sigma\":0.01"),
         "Written JSON should contain sigma 0.01; got: " + written);

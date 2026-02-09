@@ -1,5 +1,6 @@
 package ca.lajthabalazs.pressure_integrity_test.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ import java.math.BigDecimal;
 public abstract class SensorConfig {
 
   private String id;
+  private String locationId;
   private String type;
   private String units;
   private BigDecimal sigma;
@@ -31,6 +33,16 @@ public abstract class SensorConfig {
 
   public String getId() {
     return id;
+  }
+
+  /** Location this sensor belongs to; null for pressure and humidity sensors. Not serialized. */
+  @JsonIgnore
+  public String getLocationId() {
+    return locationId;
+  }
+
+  public void setLocationId(String locationId) {
+    this.locationId = locationId;
   }
 
   public void setId(String id) {

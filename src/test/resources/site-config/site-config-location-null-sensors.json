@@ -1,0 +1,1 @@
+{"id":"LOC_NULL_SENSORS","description":"Site with location that has null sensors","containment":{"netVolume_m3":100},"designPressure":{"overpressure_bar":1,"leakLimit_percent_per_day":10},"locations":[{"id":"L1","volumeFactor":0.02,"sensors":null}]}

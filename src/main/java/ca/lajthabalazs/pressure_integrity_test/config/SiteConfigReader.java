@@ -47,9 +47,21 @@ public class SiteConfigReader {
       if (config == null) {
         throw new SiteConfigParseException("JSON did not produce a site config object");
       }
+      setLocationIdsOnSensors(config);
       return config;
     } catch (JsonProcessingException e) {
       throw new SiteConfigParseException("Invalid JSON or config: " + e.getMessage(), e);
+    }
+  }
+
+  private static void setLocationIdsOnSensors(SiteConfig config) {
+    if (config.getLocations() == null) return;
+    for (LocationConfig loc : config.getLocations()) {
+      if (loc == null || loc.getSensors() == null) continue;
+      String locationId = loc.getId();
+      for (SensorConfig s : loc.getSensors()) {
+        if (s != null) s.setLocationId(locationId);
+      }
     }
   }
 

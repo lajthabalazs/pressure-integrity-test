@@ -3,6 +3,7 @@ package ca.lajthabalazs.pressure_integrity_test.ui.view;
 import ca.lajthabalazs.pressure_integrity_test.config.Containment;
 import ca.lajthabalazs.pressure_integrity_test.config.DesignPressure;
 import ca.lajthabalazs.pressure_integrity_test.config.HumiditySensorConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.LocationConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.PressureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.SensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
@@ -14,8 +15,9 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.io.File;
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -143,54 +145,47 @@ class SiteSelectionStepPanel extends JPanel {
     }
     sb.append("<p style='margin:4px 0 0 0'></p>");
 
-    List<SensorConfig> sensors = config.getSensors() != null ? config.getSensors() : List.of();
-    List<PressureSensorConfig> pressureSensors = new ArrayList<>();
-    List<TemperatureSensorConfig> temperatureSensors = new ArrayList<>();
-    List<HumiditySensorConfig> humiditySensors = new ArrayList<>();
-    for (SensorConfig s : sensors) {
-      if (s instanceof PressureSensorConfig) pressureSensors.add((PressureSensorConfig) s);
-      else if (s instanceof TemperatureSensorConfig)
-        temperatureSensors.add((TemperatureSensorConfig) s);
-      else if (s instanceof HumiditySensorConfig) humiditySensors.add((HumiditySensorConfig) s);
-    }
+    List<LocationConfig> locations =
+        config.getLocations() != null ? config.getLocations() : List.of();
 
-    // Pressure sensors (space between each sensor)
-    if (!pressureSensors.isEmpty()) {
-      sb.append("<p style='margin:0 0 2px 0'><b>Pressure sensors (total: ")
-          .append(pressureSensors.size())
-          .append(")</b></p>");
-      for (PressureSensorConfig p : pressureSensors) {
-        sb.append("<p style='margin:0 0 6px 12px'>")
-            .append(htmlEscape(formatSensorLine(p.getId(), p.getDescription(), p.getSigma(), null)))
-            .append("</p>");
-      }
-      sb.append("<p style='margin:4px 0 0 0'></p>");
-    }
-
-    // Temperature sensors (with attached humidity if any)
-    if (!temperatureSensors.isEmpty()) {
-      int withHumidity = 0;
-      for (TemperatureSensorConfig t : temperatureSensors) {
-        for (HumiditySensorConfig h : humiditySensors) {
-          if (t.getId() != null && t.getId().equals(h.getPairedTemperatureSensor())) {
-            withHumidity++;
-            break;
+    for (LocationConfig loc : locations) {
+      if (loc == null || loc.getSensors() == null || loc.getSensors().isEmpty()) continue;
+      BigDecimal volumeFactor = loc.getVolumeFactor();
+      String locId = loc.getId() != null ? loc.getId() : "—";
+      sb.append("<p style='margin:6px 0 2px 0'><b>Location ")
+          .append(htmlEscape(locId))
+          .append("</b> (volume factor ")
+          .append(htmlEscape(formatDecimal(volumeFactor)))
+          .append(")</p>");
+      Set<String> humidityShownUnderTemp = new HashSet<>();
+      for (SensorConfig s : loc.getSensors()) {
+        if (s == null) continue;
+        if (s instanceof PressureSensorConfig) {
+          PressureSensorConfig p = (PressureSensorConfig) s;
+          sb.append("<p style='margin:0 0 0 12px'>")
+              .append(
+                  htmlEscape(formatSensorLine(p.getId(), p.getDescription(), p.getSigma(), null)))
+              .append("</p>");
+        } else if (s instanceof TemperatureSensorConfig) {
+          TemperatureSensorConfig t = (TemperatureSensorConfig) s;
+          sb.append("<p style='margin:0 0 0 12px'>")
+              .append(htmlEscape(formatTempLine(t, volumeFactor)))
+              .append("</p>");
+          for (SensorConfig s2 : loc.getSensors()) {
+            if (s2 instanceof HumiditySensorConfig) {
+              HumiditySensorConfig h = (HumiditySensorConfig) s2;
+              if (t.getId() != null && t.getId().equals(h.getPairedTemperatureSensor())) {
+                sb.append("<p style='margin:0 0 0 24px'>Humidity: ")
+                    .append(htmlEscape(formatHumidityLine(h)))
+                    .append("</p>");
+                if (h.getId() != null) humidityShownUnderTemp.add(h.getId());
+              }
+            }
           }
-        }
-      }
-      sb.append("<p style='margin:0 0 2px 0'><b>Temperature sensors (total: ")
-          .append(temperatureSensors.size())
-          .append(", ")
-          .append(withHumidity)
-          .append(" with humidity sensors)</b></p>");
-      for (TemperatureSensorConfig t : temperatureSensors) {
-        // Space above each temp+humidity group; no extra space before attached humidity
-        sb.append("<p style='margin:6px 0 0 12px'>")
-            .append(htmlEscape(formatTempLine(t)))
-            .append("</p>");
-        for (HumiditySensorConfig h : humiditySensors) {
-          if (t.getId() != null && t.getId().equals(h.getPairedTemperatureSensor())) {
-            sb.append("<p style='margin:0 0 0 24px'>Humidity: ")
+        } else if (s instanceof HumiditySensorConfig) {
+          HumiditySensorConfig h = (HumiditySensorConfig) s;
+          if (h.getId() != null && !humidityShownUnderTemp.contains(h.getId())) {
+            sb.append("<p style='margin:0 0 0 12px'>Humidity: ")
                 .append(htmlEscape(formatHumidityLine(h)))
                 .append("</p>");
           }
@@ -230,13 +225,13 @@ class SiteSelectionStepPanel extends JPanel {
     return sb.toString();
   }
 
-  private static String formatTempLine(TemperatureSensorConfig t) {
+  private static String formatTempLine(TemperatureSensorConfig t, BigDecimal volumeFactor) {
     StringBuilder sb = new StringBuilder();
     sb.append(t.getId() != null ? t.getId() : "—");
     sb.append(", ");
     sb.append(t.getDescription() != null ? t.getDescription() : "—");
-    sb.append(", volume coeff ");
-    sb.append(formatDecimal(t.getVolumeWeight()));
+    sb.append(", volume factor ");
+    sb.append(formatDecimal(volumeFactor));
     sb.append(", valid range ");
     ValidRange vr = t.getValidRange();
     if (vr != null && (vr.getMin() != null || vr.getMax() != null)) {
