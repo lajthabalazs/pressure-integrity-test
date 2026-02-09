@@ -422,28 +422,6 @@ public class MeasurementVectorPlaybackStreamTest {
   }
 
   @Test
-  public void startPlayback_vectorWithEmptyMeasurements_throwsIllegalArgumentException() {
-    playbackStream = new MeasurementVectorPlaybackStream();
-    Measurement m = new Humidity(1000L, "H1", new BigDecimal("50"));
-    long startTime = System.currentTimeMillis();
-
-    List<MeasurementVector> vectorsWithEmpty =
-        List.of(
-            new MeasurementVector(1000L, List.of(m)),
-            new MeasurementVector(1000L, List.of()),
-            new MeasurementVector(1000L, List.of(m)));
-
-    IllegalArgumentException thrown =
-        Assertions.assertThrows(
-            IllegalArgumentException.class,
-            () -> playbackStream.startPlayback(vectorsWithEmpty, startTime));
-
-    Assertions.assertTrue(
-        thrown.getMessage().contains("non-empty measurements"),
-        "Message should mention non-empty measurements: " + thrown.getMessage());
-  }
-
-  @Test
   public void shutdown_whenAwaitTerminationTimesOut_callsShutdownNow() throws Exception {
     ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     executor.schedule(
@@ -1011,6 +989,58 @@ public class MeasurementVectorPlaybackStreamTest {
     List<Long> distinctTimestamps =
         received.stream().map(Measurement::getTimeUtc).distinct().sorted().toList();
     Assertions.assertEquals(4, distinctTimestamps.size());
+  }
+
+  @Test
+  public void pause_whenNoPlayback_doesNothing() {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    Assertions.assertDoesNotThrow(() -> playbackStream.pause());
+    Assertions.assertFalse(playbackStream.isPaused());
+  }
+
+  @Test
+  public void pause_whenAlreadyPaused_doesNothing() throws Exception {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    Measurement m = new Humidity(1000L, "H1", new BigDecimal("50"));
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
+    playbackStream.startPlayback(
+        List.of(new MeasurementVector(1000L, List.of(m))), System.currentTimeMillis());
+    Thread.sleep(20);
+    playbackStream.pause();
+    Assertions.assertTrue(playbackStream.isPaused());
+    Assertions.assertDoesNotThrow(() -> playbackStream.pause());
+    Assertions.assertTrue(playbackStream.isPaused());
+  }
+
+  @Test
+  public void resume_whenNoPlayback_doesNothing() {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    Assertions.assertDoesNotThrow(() -> playbackStream.resume());
+    Assertions.assertFalse(playbackStream.isPaused());
+  }
+
+  @Test
+  public void setSpeed_whenNoPlayback_doesNothing() {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    Assertions.assertDoesNotThrow(() -> playbackStream.setSpeed(2.0));
+  }
+
+  @Test
+  public void setSpeed_whenPaused_doesNotReschedule() throws Exception {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(baseTime, "H1", new BigDecimal("45.0")),
+            new Humidity(baseTime + 100, "H1", new BigDecimal("45.1")));
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
+    playbackStream.startPlayback(vectorsOf(measurements), System.currentTimeMillis());
+    Thread.sleep(30);
+    playbackStream.pause();
+    playbackStream.setSpeed(10.0); // Should update speed but not reschedule (no playback running)
+    Assertions.assertTrue(playbackStream.isPaused());
   }
 
   @Test

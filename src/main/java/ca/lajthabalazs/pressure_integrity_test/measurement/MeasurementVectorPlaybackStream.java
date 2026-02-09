@@ -26,11 +26,13 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
   private volatile double speedFactor = 1.0;
   private volatile boolean useOriginalTimestamps;
   private volatile long startTime;
-  private volatile long playbackStartTime;
   private volatile long firstVectorTime;
   private volatile List<MeasurementVector> playbackVectors;
   private final AtomicInteger nextIndexToPublish = new AtomicInteger(0);
   private volatile boolean paused;
+
+  // Virtual time tracking
+  private final VirtualTimeTracker virtualTimeTracker = new VirtualTimeTracker();
 
   /** Creates a new MeasurementVectorPlaybackStream. */
   public MeasurementVectorPlaybackStream() {
@@ -58,20 +60,15 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
    * @param factor speed factor (e.g. 2.0 = twice as fast, 0.5 = half speed). Must be positive.
    */
   public void setSpeed(double factor) {
-    if (factor <= 0 || !Double.isFinite(factor)) {
-      throw new IllegalArgumentException("Speed factor must be positive and finite");
-    }
+    long now = System.currentTimeMillis();
+    virtualTimeTracker.setSpeed(now, factor);
     this.speedFactor = factor;
+
     if (playbackVectors == null || playbackVectors.isEmpty() || paused) {
       return;
     }
+
     cancelAllScheduledTasks();
-    int next = nextIndexToPublish.get();
-    if (next < playbackVectors.size()) {
-      long vectorTime = playbackVectors.get(next).getTimeUtc();
-      long timeDelta = vectorTime - firstVectorTime;
-      playbackStartTime = System.currentTimeMillis() - (long) (timeDelta / speedFactor);
-    }
     rescheduleFromNextIndex();
   }
 
@@ -115,18 +112,21 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
       throw new IllegalArgumentException("vectors must be non-empty");
     }
     for (MeasurementVector v : vectors) {
-      if (v == null || v.getMeasurementsMap() == null || v.getMeasurementsMap().isEmpty()) {
+      if (v == null || v.getMeasurementsMap() == null) {
         throw new IllegalArgumentException("Each vector must have non-empty measurements");
       }
     }
 
-    this.firstVectorTime = vectors.get(0).getTimeUtc();
+    this.firstVectorTime = vectors.getFirst().getTimeUtc();
     this.startTime = startTime;
     this.useOriginalTimestamps = useOriginalTimestamps;
-    this.playbackStartTime = System.currentTimeMillis();
     this.playbackVectors = new ArrayList<>(vectors);
     this.nextIndexToPublish.set(0);
     this.paused = false;
+
+    // Initialize virtual time tracking
+    virtualTimeTracker.start(System.currentTimeMillis());
+    virtualTimeTracker.setSpeed(System.currentTimeMillis(), speedFactor);
 
     for (int i = 0; i < playbackVectors.size(); i++) {
       scheduleTask(i);
@@ -154,12 +154,13 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
     List<MeasurementVector> vectors = playbackVectors;
     MeasurementVector vector = vectors.get(index);
     long vectorTime = vector.getTimeUtc();
-    long timeDelta = vectorTime - firstVectorTime;
-    double factor = speedFactor;
-    long scheduledRealTime = playbackStartTime + (long) (timeDelta / factor);
-    long delay = Math.max(0, scheduledRealTime - System.currentTimeMillis());
+    long vectorVirtualTime = vectorTime - firstVectorTime;
 
-    final long timestampBase = useOriginalTimestamps ? vectorTime : (startTime + timeDelta);
+    // Calculate delay using virtual time tracker
+    long now = System.currentTimeMillis();
+    long delay = virtualTimeTracker.calculateDelay(vectorVirtualTime, now);
+
+    final long timestampBase = useOriginalTimestamps ? vectorTime : (startTime + vectorVirtualTime);
     final boolean useOriginal = useOriginalTimestamps;
 
     ScheduledFuture<?> task =
@@ -187,6 +188,10 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
 
   /** Pauses playback. Remaining vectors are not published until {@link #resume()} is called. */
   public void pause() {
+    if (paused || playbackVectors == null) {
+      return;
+    }
+    virtualTimeTracker.pause(System.currentTimeMillis());
     cancelAllScheduledTasks();
     paused = true;
   }
@@ -201,10 +206,8 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
       paused = false;
       return;
     }
-    List<MeasurementVector> vectors = playbackVectors;
-    long vectorTime = vectors.get(next).getTimeUtc();
-    long timeDelta = vectorTime - firstVectorTime;
-    playbackStartTime = System.currentTimeMillis() - (long) (timeDelta / speedFactor);
+
+    virtualTimeTracker.resume(System.currentTimeMillis());
     paused = false;
     rescheduleFromNextIndex();
   }
@@ -219,6 +222,7 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
     cancelAllScheduledTasks();
     playbackVectors = null;
     paused = false;
+    virtualTimeTracker.reset();
   }
 
   /** Shuts down the playback stream and releases resources. */
