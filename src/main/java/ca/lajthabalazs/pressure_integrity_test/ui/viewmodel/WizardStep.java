@@ -2,6 +2,7 @@ package ca.lajthabalazs.pressure_integrity_test.ui.viewmodel;
 
 public enum WizardStep {
   SITE_SELECTION("Site Selection"),
+  CALIBRATION("Calibration"),
   TEST_TYPE("Test Type"),
   DATA_INTERFACE("Local settings");
 

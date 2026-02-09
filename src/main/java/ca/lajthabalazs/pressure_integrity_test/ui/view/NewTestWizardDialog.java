@@ -26,6 +26,7 @@ public class NewTestWizardDialog extends JDialog {
   private final JLabel stepTitleLabel;
   private final SiteSelectionStepPanel siteSelectionPanel;
   private final TestTypeStepPanel testTypePanel;
+  private final CalibrationStepPanel calibrationStepPanel;
   private final DataInterfaceStepPanel dataInterfacePanel;
   private final JPanel stepContentPanel;
   private final JButton finalizeButton;
@@ -62,10 +63,12 @@ public class NewTestWizardDialog extends JDialog {
 
     siteSelectionPanel = new SiteSelectionStepPanel(viewModel);
     testTypePanel = new TestTypeStepPanel(viewModel);
+    calibrationStepPanel = new CalibrationStepPanel(viewModel);
     dataInterfacePanel = new DataInterfaceStepPanel(viewModel);
 
     contentPanel.add(siteSelectionPanel, WizardStep.SITE_SELECTION.name());
     contentPanel.add(testTypePanel, WizardStep.TEST_TYPE.name());
+    contentPanel.add(calibrationStepPanel, WizardStep.CALIBRATION.name());
     contentPanel.add(dataInterfacePanel, WizardStep.DATA_INTERFACE.name());
 
     stepContentPanel = new JPanel(new BorderLayout());
@@ -143,14 +146,19 @@ public class NewTestWizardDialog extends JDialog {
   private void updateStepPanelEditability() {
     siteSelectionPanel.setEditable(viewModel.isStepEditable(0));
     siteSelectionPanel.updateFromViewModel();
-    testTypePanel.setEditable(viewModel.isStepEditable(1));
+    calibrationStepPanel.setEditable(viewModel.isStepEditable(1));
+    calibrationStepPanel.updateFromViewModel();
+    testTypePanel.setEditable(viewModel.isStepEditable(2));
     testTypePanel.updateFromViewModel();
-    dataInterfacePanel.setEditable(viewModel.isStepEditable(2));
+    dataInterfacePanel.setEditable(viewModel.isStepEditable(3));
     dataInterfacePanel.updateFromViewModel();
   }
 
   private void onFinalize() {
     viewModel.finalizeCurrentStep();
+    if (viewModel.getCurrentStepIndex() < WizardStep.values().length - 1) {
+      viewModel.goToNextStep();
+    }
   }
 
   private void onOpenForEditing() {

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/site-config.schema.json",
+  "title": "SiteConfig",
+  "description": "Site configuration: containment, design pressure, and locations with sensors (pressure, temperature, humidity).",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Site identifier."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable site description."
+    },
+    "containment": {
+      "$ref": "#/$defs/Containment",
+      "description": "Containment vessel parameters."
+    },
+    "designPressure": {
+      "$ref": "#/$defs/DesignPressure",
+      "description": "Design pressure and leak-rate limits."
+    },
+    "locations": {
+      "type": "array",
+      "description": "Locations, each with a volume factor and sensors.",
+      "items": { "$ref": "#/$defs/LocationConfig" },
+      "default": []
+    }
+  },
+  "$defs": {
+    "Containment": {
+      "type": "object",
+      "description": "Containment vessel parameters.",
+      "properties": {
+        "netVolume_m3": {
+          "type": "number",
+          "description": "Net volume in cubic metres."
+        }
+      }
+    },
+    "DesignPressure": {
+      "type": "object",
+      "description": "Design pressure and leak-rate limits for the integrity test.",
+      "properties": {
+        "overpressure_bar": {
+          "type": "number",
+          "description": "Overpressure limit in bar."
+        },
+        "leakLimit_percent_per_day": {
+          "type": "number",
+          "description": "Leak limit as percent per day."
+        }
+      }
+    },
+    "LocationConfig": {
+      "type": "object",
+      "description": "A location with a volume factor (for ideal gas law) and sensors.",
+      "properties": {
+        "id": { "type": "string", "description": "Location identifier." },
+        "volumeFactor": {
+          "type": "number",
+          "description": "Volume factor for temperature sensors in this location."
+        },
+        "sensors": {
+          "type": "array",
+          "description": "Sensors in this location (pressure, temperature, humidity).",
+          "items": { "$ref": "#/$defs/SensorConfig" },
+          "default": []
+        }
+      }
+    },
+    "SensorConfig": {
+      "oneOf": [
+        { "$ref": "#/$defs/PressureSensorConfig" },
+        { "$ref": "#/$defs/TemperatureSensorConfig" },
+        { "$ref": "#/$defs/HumiditySensorConfig" }
+      ],
+      "description": "A sensor: pressure, temperature, or humidity (discriminated by type)."
+    },
+    "PressureSensorConfig": {
+      "type": "object",
+      "description": "Pressure sensor configuration.",
+      "required": [ "id", "type" ],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "const": "pressure" },
+        "units": { "type": "string" },
+        "sigma": { "type": "number" },
+        "description": { "type": "string" }
+      }
+    },
+    "TemperatureSensorConfig": {
+      "type": "object",
+      "description": "Temperature sensor configuration. Volume factor is on the location.",
+      "required": [ "id", "type" ],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "const": "temperature" },
+        "units": { "type": "string" },
+        "validRange": { "$ref": "#/$defs/ValidRange" },
+        "sigma": { "type": "number" },
+        "description": { "type": "string" }
+      }
+    },
+    "HumiditySensorConfig": {
+      "type": "object",
+      "description": "Humidity sensor configuration (paired with a temperature sensor).",
+      "required": [ "id", "type" ],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "const": "humidity" },
+        "units": { "type": "string" },
+        "pairedTemperatureSensor": {
+          "type": "string",
+          "description": "Id of the temperature sensor this humidity sensor is paired with."
+        },
+        "validRange": { "$ref": "#/$defs/ValidRange" },
+        "sigma": { "type": "number" },
+        "description": { "type": "string" }
+      }
+    },
+    "ValidRange": {
+      "type": "object",
+      "description": "Valid range (min/max) for a sensor.",
+      "properties": {
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      }
+    }
+  }
+}

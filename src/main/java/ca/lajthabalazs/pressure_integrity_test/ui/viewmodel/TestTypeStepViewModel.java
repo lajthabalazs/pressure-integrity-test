@@ -128,6 +128,13 @@ public class TestTypeStepViewModel {
     setStage(stageIndex, new StageConfig(overpressure, durationMinutes));
   }
 
+  /** Max overpressure (bar) for validation: site config value if set, otherwise fallback. */
+  private double getMaxOverpressureBar() {
+    return siteConfigMaxOverpressureBar != null
+        ? siteConfigMaxOverpressureBar.doubleValue()
+        : MAX_OVERPRESSURE_BAR;
+  }
+
   public boolean hasData() {
     if (testType == null) {
       return false;
@@ -135,8 +142,12 @@ public class TestTypeStepViewModel {
     if (stages.size() != testType.getStageCount()) {
       return false;
     }
+    double maxBar = getMaxOverpressureBar();
     for (StageConfig stage : stages) {
       if (stage.durationMinutes() <= 0) {
+        return false;
+      }
+      if (stage.overpressureBar() <= MIN_OVERPRESSURE_BAR || stage.overpressureBar() > maxBar) {
         return false;
       }
     }

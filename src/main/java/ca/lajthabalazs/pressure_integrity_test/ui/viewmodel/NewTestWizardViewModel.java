@@ -18,6 +18,7 @@ public class NewTestWizardViewModel {
   private final List<Listener> listeners = new ArrayList<>();
   private final SiteSelectionStepViewModel siteSelectionStep;
   private final TestTypeStepViewModel testTypeStep;
+  private final CalibrationStepViewModel calibrationStep;
   private final DataInterfaceStepViewModel dataInterfaceStep;
 
   private int currentStepIndex = 0;
@@ -25,10 +26,12 @@ public class NewTestWizardViewModel {
   public NewTestWizardViewModel(File rootDirectory) {
     this.siteSelectionStep = new SiteSelectionStepViewModel(rootDirectory);
     this.testTypeStep = new TestTypeStepViewModel();
+    this.calibrationStep = new CalibrationStepViewModel();
     this.dataInterfaceStep = new DataInterfaceStepViewModel();
 
     siteSelectionStep.addListener(this::onSiteSelectionChanged);
     testTypeStep.addListener(this::notifyListeners);
+    calibrationStep.addListener(this::notifyListeners);
     dataInterfaceStep.addListener(this::notifyListeners);
   }
 
@@ -74,6 +77,10 @@ public class NewTestWizardViewModel {
 
   public TestTypeStepViewModel getTestTypeStep() {
     return testTypeStep;
+  }
+
+  public CalibrationStepViewModel getCalibrationStep() {
+    return calibrationStep;
   }
 
   public DataInterfaceStepViewModel getDataInterfaceStep() {
@@ -125,8 +132,9 @@ public class NewTestWizardViewModel {
   public boolean isStepFinalized(int stepIndex) {
     return switch (stepIndex) {
       case 0 -> siteSelectionStep.isFinalized();
-      case 1 -> testTypeStep.isFinalized();
-      case 2 -> dataInterfaceStep.isFinalized();
+      case 1 -> calibrationStep.isFinalized();
+      case 2 -> testTypeStep.isFinalized();
+      case 3 -> dataInterfaceStep.isFinalized();
       default -> false;
     };
   }
@@ -138,8 +146,9 @@ public class NewTestWizardViewModel {
   public boolean canFinalizeCurrentStep() {
     return switch (currentStepIndex) {
       case 0 -> siteSelectionStep.canFinalize();
-      case 1 -> testTypeStep.canFinalize();
-      case 2 -> dataInterfaceStep.canFinalize();
+      case 1 -> calibrationStep.canFinalize();
+      case 2 -> testTypeStep.canFinalize();
+      case 3 -> dataInterfaceStep.canFinalize();
       default -> false;
     };
   }
@@ -147,8 +156,9 @@ public class NewTestWizardViewModel {
   public void finalizeCurrentStep() {
     switch (currentStepIndex) {
       case 0 -> siteSelectionStep.finalizeStep();
-      case 1 -> testTypeStep.finalizeStep();
-      case 2 -> dataInterfaceStep.finalizeStep();
+      case 1 -> calibrationStep.finalizeStep();
+      case 2 -> testTypeStep.finalizeStep();
+      case 3 -> dataInterfaceStep.finalizeStep();
       default -> {}
     }
   }
@@ -156,8 +166,9 @@ public class NewTestWizardViewModel {
   public void openForEditingCurrentStep() {
     switch (currentStepIndex) {
       case 0 -> siteSelectionStep.openForEditing();
-      case 1 -> testTypeStep.openForEditing();
-      case 2 -> dataInterfaceStep.openForEditing();
+      case 1 -> calibrationStep.openForEditing();
+      case 2 -> testTypeStep.openForEditing();
+      case 3 -> dataInterfaceStep.openForEditing();
       default -> {}
     }
   }
@@ -169,6 +180,7 @@ public class NewTestWizardViewModel {
   public boolean canStart() {
     return siteSelectionStep.isFinalized()
         && testTypeStep.isFinalized()
+        && calibrationStep.isFinalized()
         && dataInterfaceStep.isFinalized();
   }
 
