@@ -12,6 +12,7 @@ import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.io.File;
 import java.nio.charset.Charset;
@@ -34,6 +35,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.table.DefaultTableModel;
 
 public class MainWindow extends JFrame {
@@ -42,6 +44,15 @@ public class MainWindow extends JFrame {
   private static final DateTimeFormatter TIME_FORMAT =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(DISPLAY_ZONE);
   private static final int DEFAULT_COLUMN_WIDTH_PX = 120;
+
+  /** Background for the currently selected playback speed button (green). */
+  private static final Color SELECTED_SPEED_BG = new Color(100, 200, 100);
+
+  /** Green color for blinking resume button. */
+  private static final Color RESUME_BLINK_GREEN = new Color(100, 255, 100);
+
+  /** Fixed size for speed buttons so they are uniform and "120x" fits. */
+  private static final Dimension SPEED_BUTTON_SIZE = new Dimension(56, 26);
 
   private final File rootDirectory;
   private final DefaultTableModel dataTableModel;
@@ -55,8 +66,11 @@ public class MainWindow extends JFrame {
   private final AtomicReference<MeasurementVectorPlaybackStream> currentPlaybackStream =
       new AtomicReference<>(null);
   private final JPanel simulationControlPanel;
-  private JButton simulationPauseButton;
-  private JButton simulationResumeButton;
+  private JButton simulationPauseResumeButton;
+  private final List<JButton> speedButtons = new ArrayList<>();
+  private final List<Double> speedValues = new ArrayList<>();
+  private volatile double currentPlaybackSpeed = 30.0;
+  private Timer resumeBlinkTimer;
 
   public MainWindow(File rootDirectory) {
     this.rootDirectory =
@@ -117,60 +131,91 @@ public class MainWindow extends JFrame {
             javax.swing.BorderFactory.createEtchedBorder(),
             javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8)));
 
-    simulationPauseButton = new JButton("Pause");
-    simulationResumeButton = new JButton("Resume");
-
-    simulationPauseButton.addActionListener(
+    simulationPauseResumeButton = new JButton("Pause");
+    simulationPauseResumeButton.setBackground(Color.WHITE);
+    simulationPauseResumeButton.setOpaque(true);
+    simulationPauseResumeButton.addActionListener(
         e -> {
           MeasurementVectorPlaybackStream stream = currentPlaybackStream.get();
           if (stream != null) {
-            stream.pause();
-            updateSimulationControlState(stream);
-          }
-        });
-    simulationResumeButton.addActionListener(
-        e -> {
-          MeasurementVectorPlaybackStream stream = currentPlaybackStream.get();
-          if (stream != null) {
-            stream.resume();
+            if (stream.isPaused()) {
+              stream.resume();
+            } else {
+              stream.pause();
+            }
             updateSimulationControlState(stream);
           }
         });
 
     panel.add(new JLabel("Simulation:"));
-    panel.add(simulationPauseButton);
-    panel.add(simulationResumeButton);
+    panel.add(simulationPauseResumeButton);
     panel.add(new JLabel("Speed:"));
     for (double speed : new double[] {2, 5, 10, 30, 60, 120}) {
       JButton speedBtn = new JButton((long) speed + "x");
+      speedBtn.setPreferredSize(SPEED_BUTTON_SIZE);
+      speedBtn.setMinimumSize(SPEED_BUTTON_SIZE);
+      speedBtn.setMaximumSize(SPEED_BUTTON_SIZE);
+      speedBtn.setBackground(Color.WHITE);
+      speedBtn.setOpaque(true);
       speedBtn.addActionListener(
           e -> {
             MeasurementVectorPlaybackStream stream = currentPlaybackStream.get();
             if (stream != null) {
               stream.setSpeed(speed);
+              currentPlaybackSpeed = speed;
+              updateSpeedButtonsAppearance();
               updateSimulationControlState(stream);
             }
           });
+      speedValues.add(speed);
+      speedButtons.add(speedBtn);
       panel.add(speedBtn);
     }
-    JButton stopButton = new JButton("Stop");
-    stopButton.addActionListener(
-        e -> {
-          MeasurementVectorPlaybackStream stream = currentPlaybackStream.getAndSet(null);
-          if (stream != null) {
-            stream.stopPlayback();
-            simulationControlPanel.setVisible(false);
-          }
-        });
-    panel.add(stopButton);
 
     return panel;
   }
 
+  private void updateSpeedButtonsAppearance() {
+    for (int i = 0; i < speedButtons.size(); i++) {
+      JButton btn = speedButtons.get(i);
+      double speed = speedValues.get(i);
+      if (speed == currentPlaybackSpeed) {
+        btn.setEnabled(false);
+        btn.setBackground(SELECTED_SPEED_BG);
+      } else {
+        btn.setEnabled(true);
+        btn.setBackground(Color.WHITE);
+      }
+    }
+  }
+
   private void updateSimulationControlState(MeasurementVectorPlaybackStream stream) {
     boolean paused = stream.isPaused();
-    simulationPauseButton.setEnabled(!paused);
-    simulationResumeButton.setEnabled(paused);
+    simulationPauseResumeButton.setText(paused ? "Resume" : "Pause");
+
+    // Start/stop blinking timer for resume button
+    if (resumeBlinkTimer != null) {
+      resumeBlinkTimer.stop();
+      resumeBlinkTimer = null;
+    }
+
+    if (paused) {
+      // Start blinking green
+      resumeBlinkTimer =
+          new Timer(
+              500,
+              e -> {
+                Color current = simulationPauseResumeButton.getBackground();
+                simulationPauseResumeButton.setBackground(
+                    current.equals(Color.WHITE) ? RESUME_BLINK_GREEN : Color.WHITE);
+              });
+      resumeBlinkTimer.start();
+    } else {
+      // Not paused, ensure button is white
+      simulationPauseResumeButton.setBackground(Color.WHITE);
+    }
+
+    updateSpeedButtonsAppearance();
   }
 
   private void onStartNewTest() {
@@ -205,6 +250,11 @@ public class MainWindow extends JFrame {
     MeasurementVectorPlaybackStream previous = currentPlaybackStream.getAndSet(null);
     if (previous != null) {
       previous.stopPlayback();
+    }
+    // Stop any existing blink timer
+    if (resumeBlinkTimer != null) {
+      resumeBlinkTimer.stop();
+      resumeBlinkTimer = null;
     }
     simulationControlPanel.setVisible(false);
 
@@ -261,7 +311,9 @@ public class MainWindow extends JFrame {
                 long startTime = System.currentTimeMillis();
                 SwingUtilities.invokeLater(
                     () -> {
+                      currentPlaybackSpeed = 30.0;
                       playbackStream.startPlayback(vectors, startTime);
+                      playbackStream.pause(); // Start paused
                       simulationControlPanel.setVisible(true);
                       updateSimulationControlState(playbackStream);
                     });
