@@ -30,6 +30,7 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
   private volatile long firstVectorTime;
   private volatile List<MeasurementVector> playbackVectors;
   private final AtomicInteger nextIndexToPublish = new AtomicInteger(0);
+  private volatile boolean paused;
 
   /** Creates a new MeasurementVectorPlaybackStream. */
   public MeasurementVectorPlaybackStream() {
@@ -61,10 +62,16 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
       throw new IllegalArgumentException("Speed factor must be positive and finite");
     }
     this.speedFactor = factor;
-    if (playbackVectors == null || playbackVectors.isEmpty()) {
+    if (playbackVectors == null || playbackVectors.isEmpty() || paused) {
       return;
     }
     cancelAllScheduledTasks();
+    int next = nextIndexToPublish.get();
+    if (next < playbackVectors.size()) {
+      long vectorTime = playbackVectors.get(next).getTimeUtc();
+      long timeDelta = vectorTime - firstVectorTime;
+      playbackStartTime = System.currentTimeMillis() - (long) (timeDelta / speedFactor);
+    }
     rescheduleFromNextIndex();
   }
 
@@ -119,6 +126,7 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
     this.playbackStartTime = System.currentTimeMillis();
     this.playbackVectors = new ArrayList<>(vectors);
     this.nextIndexToPublish.set(0);
+    this.paused = false;
 
     for (int i = 0; i < playbackVectors.size(); i++) {
       scheduleTask(i);
@@ -177,10 +185,40 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
     scheduledTasks.add(task);
   }
 
+  /** Pauses playback. Remaining vectors are not published until {@link #resume()} is called. */
+  public void pause() {
+    cancelAllScheduledTasks();
+    paused = true;
+  }
+
+  /** Resumes playback from the next pending vector. */
+  public void resume() {
+    if (playbackVectors == null || !paused) {
+      return;
+    }
+    int next = nextIndexToPublish.get();
+    if (next >= playbackVectors.size()) {
+      paused = false;
+      return;
+    }
+    List<MeasurementVector> vectors = playbackVectors;
+    long vectorTime = vectors.get(next).getTimeUtc();
+    long timeDelta = vectorTime - firstVectorTime;
+    playbackStartTime = System.currentTimeMillis() - (long) (timeDelta / speedFactor);
+    paused = false;
+    rescheduleFromNextIndex();
+  }
+
+  /** Returns true if playback is paused. */
+  public boolean isPaused() {
+    return paused;
+  }
+
   /** Stops the current playback if it is in progress. */
   public void stopPlayback() {
     cancelAllScheduledTasks();
     playbackVectors = null;
+    paused = false;
   }
 
   /** Shuts down the playback stream and releases resources. */

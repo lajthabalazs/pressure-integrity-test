@@ -12,6 +12,7 @@ import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.FlowLayout;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -49,6 +51,12 @@ public class MainWindow extends JFrame {
    * Sensor order from site config; used for column order and ITV key mapping when appending rows.
    */
   private final AtomicReference<List<SensorConfig>> dataSensorOrder = new AtomicReference<>(null);
+
+  private final AtomicReference<MeasurementVectorPlaybackStream> currentPlaybackStream =
+      new AtomicReference<>(null);
+  private final JPanel simulationControlPanel;
+  private JButton simulationPauseButton;
+  private JButton simulationResumeButton;
 
   public MainWindow(File rootDirectory) {
     this.rootDirectory =
@@ -91,7 +99,78 @@ public class MainWindow extends JFrame {
     dataPanel.add(dataScroll, BorderLayout.CENTER);
     tabbedPane.addTab("Data", dataPanel);
 
-    getContentPane().add(tabbedPane, BorderLayout.CENTER);
+    // Border layout: tab view in center, simulation control panel at south when running
+    JPanel mainPanel = new JPanel(new BorderLayout());
+    mainPanel.add(tabbedPane, BorderLayout.CENTER);
+
+    simulationControlPanel = createSimulationControlPanel();
+    simulationControlPanel.setVisible(false);
+    mainPanel.add(simulationControlPanel, BorderLayout.NORTH);
+
+    getContentPane().add(mainPanel, BorderLayout.CENTER);
+  }
+
+  private JPanel createSimulationControlPanel() {
+    JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
+    panel.setBorder(
+        javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createEtchedBorder(),
+            javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+
+    simulationPauseButton = new JButton("Pause");
+    simulationResumeButton = new JButton("Resume");
+
+    simulationPauseButton.addActionListener(
+        e -> {
+          MeasurementVectorPlaybackStream stream = currentPlaybackStream.get();
+          if (stream != null) {
+            stream.pause();
+            updateSimulationControlState(stream);
+          }
+        });
+    simulationResumeButton.addActionListener(
+        e -> {
+          MeasurementVectorPlaybackStream stream = currentPlaybackStream.get();
+          if (stream != null) {
+            stream.resume();
+            updateSimulationControlState(stream);
+          }
+        });
+
+    panel.add(new JLabel("Simulation:"));
+    panel.add(simulationPauseButton);
+    panel.add(simulationResumeButton);
+    panel.add(new JLabel("Speed:"));
+    for (double speed : new double[] {2, 5, 10, 30, 60, 120}) {
+      JButton speedBtn = new JButton((long) speed + "x");
+      speedBtn.addActionListener(
+          e -> {
+            MeasurementVectorPlaybackStream stream = currentPlaybackStream.get();
+            if (stream != null) {
+              stream.setSpeed(speed);
+              updateSimulationControlState(stream);
+            }
+          });
+      panel.add(speedBtn);
+    }
+    JButton stopButton = new JButton("Stop");
+    stopButton.addActionListener(
+        e -> {
+          MeasurementVectorPlaybackStream stream = currentPlaybackStream.getAndSet(null);
+          if (stream != null) {
+            stream.stopPlayback();
+            simulationControlPanel.setVisible(false);
+          }
+        });
+    panel.add(stopButton);
+
+    return panel;
+  }
+
+  private void updateSimulationControlState(MeasurementVectorPlaybackStream stream) {
+    boolean paused = stream.isPaused();
+    simulationPauseButton.setEnabled(!paused);
+    simulationResumeButton.setEnabled(paused);
   }
 
   private void onStartNewTest() {
@@ -123,6 +202,12 @@ public class MainWindow extends JFrame {
   }
 
   private void startSimulationStream(File itvFile, SiteConfig siteConfig) {
+    MeasurementVectorPlaybackStream previous = currentPlaybackStream.getAndSet(null);
+    if (previous != null) {
+      previous.stopPlayback();
+    }
+    simulationControlPanel.setVisible(false);
+
     dataSensorOrder.set(null);
     dataTableModel.setRowCount(0);
 
@@ -145,6 +230,7 @@ public class MainWindow extends JFrame {
 
     MeasurementVectorPlaybackStream playbackStream = new MeasurementVectorPlaybackStream();
     playbackStream.setSpeed(30.0);
+    currentPlaybackStream.set(playbackStream);
     playbackStream.subscribe(
         vector -> {
           SwingUtilities.invokeLater(
@@ -162,24 +248,33 @@ public class MainWindow extends JFrame {
                     new ItvFileReader(new FileSystemTextFileReader(charset)).read(path);
                 if (vectors == null || vectors.isEmpty()) {
                   SwingUtilities.invokeLater(
-                      () ->
-                          JOptionPane.showMessageDialog(
-                              this,
-                              "ITV file contains no measurement vectors.",
-                              "Simulation",
-                              JOptionPane.ERROR_MESSAGE));
+                      () -> {
+                        currentPlaybackStream.set(null);
+                        JOptionPane.showMessageDialog(
+                            this,
+                            "ITV file contains no measurement vectors.",
+                            "Simulation",
+                            JOptionPane.ERROR_MESSAGE);
+                      });
                   return;
                 }
                 long startTime = System.currentTimeMillis();
-                SwingUtilities.invokeLater(() -> playbackStream.startPlayback(vectors, startTime));
+                SwingUtilities.invokeLater(
+                    () -> {
+                      playbackStream.startPlayback(vectors, startTime);
+                      simulationControlPanel.setVisible(true);
+                      updateSimulationControlState(playbackStream);
+                    });
               } catch (FailedToReadFileException e) {
                 SwingUtilities.invokeLater(
-                    () ->
-                        JOptionPane.showMessageDialog(
-                            this,
-                            "Failed to read ITV file: " + e.getMessage(),
-                            "Simulation",
-                            JOptionPane.ERROR_MESSAGE));
+                    () -> {
+                      currentPlaybackStream.set(null);
+                      JOptionPane.showMessageDialog(
+                          this,
+                          "Failed to read ITV file: " + e.getMessage(),
+                          "Simulation",
+                          JOptionPane.ERROR_MESSAGE);
+                    });
               }
             });
     worker.start();

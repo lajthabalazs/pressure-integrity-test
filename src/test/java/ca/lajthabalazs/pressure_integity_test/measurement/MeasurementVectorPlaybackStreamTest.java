@@ -871,6 +871,196 @@ public class MeasurementVectorPlaybackStreamTest {
   }
 
   @Test
+  public void setSpeed_changeMidPlayback_measurementsArriveWithNewSpeedNotBurst() throws Exception {
+    // Verifies the fix: when speed changes, remaining measurements should be scheduled from
+    // the current moment with the new speed, NOT as if the new speed applied from playback start
+    // (which would cause many measurements to drop instantly).
+    disableGarbageCollection();
+    try {
+      playbackStream = new MeasurementVectorPlaybackStream();
+      playbackStream.setSpeed(1.0);
+      List<Measurement> received = new ArrayList<>();
+      List<Long> receiveTimesMillis = new ArrayList<>();
+
+      playbackStream.subscribe(
+          vector -> {
+            received.addAll(vector.getMeasurements());
+            receiveTimesMillis.add(System.currentTimeMillis());
+          });
+
+      // 6 vectors, 200ms apart in playback time (0, 200, 400, 600, 800, 1000)
+      long baseTime = 1000000L;
+      List<Measurement> measurements = new ArrayList<>();
+      for (int i = 0; i < 6; i++) {
+        measurements.add(new Humidity(baseTime + i * 200L, "H1", new BigDecimal("45." + i)));
+      }
+
+      long startTime = System.currentTimeMillis();
+      playbackStream.startPlayback(vectorsOf(measurements), startTime);
+
+      // Wait for first 2 vectors to arrive at 1x (~0ms and ~200ms real time)
+      Thread.sleep(250);
+      Assertions.assertTrue(
+          received.size() >= 2, "At least 2 vectors should arrive before speed change");
+
+      playbackStream.setSpeed(10.0); // 10x: remaining 1000ms of content = 100ms real time
+
+      Thread.sleep(200); // Allow remaining vectors to arrive at 10x
+
+      Assertions.assertEquals(
+          6, received.size(), "All 6 measurements must arrive; none should drop instantly");
+      List<Long> distinctTimestamps =
+          received.stream().map(Measurement::getTimeUtc).distinct().sorted().toList();
+      Assertions.assertEquals(6, distinctTimestamps.size());
+
+      // Key assertion: measurements 2-5 should NOT all arrive in the same millisecond.
+      // At 10x, 800ms of content = 80ms real time. Allow generous tolerance (50ms min between
+      // first and last post-change arrival).
+      if (receiveTimesMillis.size() >= 6) {
+        long firstPostChangeTime = receiveTimesMillis.get(2);
+        long lastPostChangeTime = receiveTimesMillis.get(5);
+        long postChangeSpan = lastPostChangeTime - firstPostChangeTime;
+        Assertions.assertTrue(
+            postChangeSpan >= 30,
+            "Post-speed-change measurements should be spread over time (not burst); "
+                + "span was "
+                + postChangeSpan
+                + "ms");
+      }
+    } finally {
+      enableGarbageCollection();
+    }
+  }
+
+  @Test
+  public void pause_resume_continuesFromCorrectPointWithCorrectTiming() throws Exception {
+    disableGarbageCollection();
+    try {
+      playbackStream = new MeasurementVectorPlaybackStream();
+      List<Measurement> received = new ArrayList<>();
+      List<Long> receiveTimesMillis = new ArrayList<>();
+
+      playbackStream.subscribe(
+          vector -> {
+            received.addAll(vector.getMeasurements());
+            receiveTimesMillis.add(System.currentTimeMillis());
+          });
+
+      // 5 vectors, 100ms apart
+      long baseTime = 1000000L;
+      List<Measurement> measurements = new ArrayList<>();
+      for (int i = 0; i < 5; i++) {
+        measurements.add(new Humidity(baseTime + i * 100L, "H1", new BigDecimal("45." + i)));
+      }
+
+      long startTime = System.currentTimeMillis();
+      playbackStream.startPlayback(vectorsOf(measurements), startTime);
+
+      Thread.sleep(120); // Let first 1-2 arrive
+      Assertions.assertTrue(received.size() >= 1);
+      playbackStream.pause();
+      Assertions.assertTrue(playbackStream.isPaused());
+
+      int countAfterPause = received.size();
+      Thread.sleep(200); // Wait - no more should arrive while paused
+      Assertions.assertEquals(
+          countAfterPause, received.size(), "No measurements should arrive while paused");
+
+      playbackStream.resume();
+      Assertions.assertFalse(playbackStream.isPaused());
+      Thread.sleep(400); // Allow remaining vectors to arrive
+
+      Assertions.assertEquals(
+          5, received.size(), "All 5 measurements must arrive after pause/resume");
+      List<Long> distinctTimestamps =
+          received.stream().map(Measurement::getTimeUtc).distinct().sorted().toList();
+      Assertions.assertEquals(5, distinctTimestamps.size());
+      for (int i = 0; i < 5; i++) {
+        Assertions.assertEquals(
+            startTime + i * 100L,
+            distinctTimestamps.get(i),
+            "Timestamp at index " + i + " must be correct after resume");
+      }
+    } finally {
+      enableGarbageCollection();
+    }
+  }
+
+  @Test
+  public void pause_resume_thenSetSpeed_continuesCorrectly() throws Exception {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      measurements.add(new Humidity(baseTime + i * 100L, "H1", new BigDecimal("45." + i)));
+    }
+
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
+
+    Thread.sleep(80);
+    playbackStream.pause();
+    Thread.sleep(50);
+    playbackStream.setSpeed(5.0); // Change speed while paused - should not reschedule
+    playbackStream.resume();
+    Thread.sleep(150);
+
+    Assertions.assertEquals(4, received.size());
+    List<Long> distinctTimestamps =
+        received.stream().map(Measurement::getTimeUtc).distinct().sorted().toList();
+    Assertions.assertEquals(4, distinctTimestamps.size());
+  }
+
+  @Test
+  public void resume_whileRunning_doesNotThrow() throws Exception {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(baseTime, "H1", new BigDecimal("45.0")),
+            new Humidity(baseTime + 100, "H1", new BigDecimal("45.1")),
+            new Humidity(baseTime + 200, "H1", new BigDecimal("45.2")));
+
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(vectorsOf(measurements), startTime);
+
+    Thread.sleep(50); // Stream is running, not paused
+    Assertions.assertFalse(playbackStream.isPaused());
+
+    Assertions.assertDoesNotThrow(() -> playbackStream.resume());
+
+    Thread.sleep(300); // Let playback complete
+    Assertions.assertEquals(3, received.size());
+  }
+
+  @Test
+  public void pause_resume_afterPlaybackFinished_doesNotThrow() throws Exception {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    List<Measurement> received = new ArrayList<>();
+    long baseTime = 1000000L;
+    List<Measurement> measurements =
+        List.of(
+            new Humidity(baseTime, "H1", new BigDecimal("45.0")),
+            new Humidity(baseTime + 50, "H1", new BigDecimal("45.1")));
+
+    playbackStream.subscribe(vector -> received.addAll(vector.getMeasurements()));
+    playbackStream.startPlayback(vectorsOf(measurements), System.currentTimeMillis());
+
+    Thread.sleep(150); // Wait for playback to finish (2 vectors at 50ms apart = ~50ms at 1x)
+    Assertions.assertEquals(2, received.size(), "Playback should have completed");
+
+    Assertions.assertDoesNotThrow(
+        () -> {
+          playbackStream.pause();
+          playbackStream.resume();
+        });
+  }
+
+  @Test
   public void setSpeed_thenStopPlayback_noExceptionAndCleanState() throws Exception {
     playbackStream = new MeasurementVectorPlaybackStream();
     List<Measurement> received = new ArrayList<>();
