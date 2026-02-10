@@ -30,6 +30,7 @@ class TestTypeStepPanel extends JPanel {
   private final Box stagesPanel;
   private TestType lastRebuiltTestType;
   private final List<DecimalTextField> overpressureFields = new ArrayList<>();
+  private final List<DecimalTextField> durationHourFields = new ArrayList<>();
 
   TestTypeStepPanel(NewTestWizardViewModel wizardViewModel) {
     this.wizardViewModel = wizardViewModel;
@@ -108,6 +109,21 @@ class TestTypeStepPanel extends JPanel {
     }
   }
 
+  /** Returns true if any overpressure or duration field has an invalid value. */
+  boolean hasInvalidFields() {
+    for (DecimalTextField f : overpressureFields) {
+      if (!f.isValidValue()) {
+        return true;
+      }
+    }
+    for (DecimalTextField f : durationHourFields) {
+      if (!f.isValidValue()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void updateFromViewModel() {
     var step = wizardViewModel.getTestTypeStep();
     TestType type = step.getTestType();
@@ -156,6 +172,7 @@ class TestTypeStepPanel extends JPanel {
   private void rebuildStagesPanel() {
     stagesPanel.removeAll();
     overpressureFields.clear();
+    durationHourFields.clear();
     var step = wizardViewModel.getTestTypeStep();
     if (step.getTestType() == null) {
       stagesPanel.revalidate();
@@ -203,6 +220,7 @@ class TestTypeStepPanel extends JPanel {
       DecimalTextField hoursField = new DecimalTextField(hoursDisplay, 3, false);
       hoursField.setPreferredSize(new java.awt.Dimension(50, 25));
       hoursField.setValidRange(0.0, 24.0);
+      durationHourFields.add(hoursField);
 
       Integer[] minuteChoices = new Integer[MINUTE_OPTIONS.length];
       for (int j = 0; j < MINUTE_OPTIONS.length; j++) {
@@ -261,6 +279,8 @@ class TestTypeStepPanel extends JPanel {
                     hoursField.getValueForParsing(),
                     (Integer) minutesCombo.getSelectedItem());
             updateOverpressureBorders();
+            // Defer so DecimalTextField validation and any deferred setText complete first
+            javax.swing.SwingUtilities.invokeLater(() -> wizardViewModel.fireChange());
           };
 
       javax.swing.event.DocumentListener docListener =

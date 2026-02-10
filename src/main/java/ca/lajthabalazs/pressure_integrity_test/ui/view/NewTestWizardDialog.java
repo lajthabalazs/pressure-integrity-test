@@ -134,6 +134,9 @@ public class NewTestWizardDialog extends JDialog {
     updateStepPanelEditability();
 
     boolean canFinalize = viewModel.canFinalizeCurrentStep();
+    if (viewModel.getCurrentStep() == WizardStep.TEST_TYPE && testTypePanel.hasInvalidFields()) {
+      canFinalize = false;
+    }
     boolean canOpenForEditing = viewModel.canOpenForEditingCurrentStep();
     finalizeButton.setEnabled(canFinalize);
     openForEditingButton.setEnabled(canOpenForEditing);

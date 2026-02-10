@@ -11,9 +11,12 @@ import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -74,6 +77,11 @@ public class MainWindow extends JFrame {
   private Timer resumeBlinkTimer;
 
   private final DashboardPanel dashboardPanel;
+  private final JPanel contentCards;
+  private final CardLayout contentCardLayout;
+
+  private static final String CARD_WELCOME = "welcome";
+  private static final String CARD_MEASUREMENT = "measurement";
 
   public MainWindow(File rootDirectory) {
     this.rootDirectory =
@@ -98,9 +106,17 @@ public class MainWindow extends JFrame {
 
     setJMenuBar(menuBar);
 
-    // Tabbed content: Dashboard | Data
-    JTabbedPane tabbedPane = new JTabbedPane();
+    contentCardLayout = new CardLayout();
+    contentCards = new JPanel(contentCardLayout);
 
+    // Welcome card: centered message when no measurement is running
+    JPanel welcomePanel = new JPanel(new GridBagLayout());
+    welcomePanel.setBackground(Color.WHITE);
+    JLabel welcomeLabel = new JLabel("Use the menu to start a measurement");
+    welcomePanel.add(welcomeLabel, new GridBagConstraints());
+
+    // Measurement card: controls + tabbed pane
+    JTabbedPane tabbedPane = new JTabbedPane();
     dashboardPanel = new DashboardPanel();
     tabbedPane.addTab("Dashboard", dashboardPanel);
 
@@ -114,15 +130,17 @@ public class MainWindow extends JFrame {
     dataPanel.add(dataScroll, BorderLayout.CENTER);
     tabbedPane.addTab("Data", dataPanel);
 
-    // Border layout: tab view in center, simulation control panel at south when running
-    JPanel mainPanel = new JPanel(new BorderLayout());
-    mainPanel.add(tabbedPane, BorderLayout.CENTER);
-
+    JPanel measurementPanel = new JPanel(new BorderLayout());
     simulationControlPanel = createSimulationControlPanel();
     simulationControlPanel.setVisible(false);
-    mainPanel.add(simulationControlPanel, BorderLayout.NORTH);
+    measurementPanel.add(simulationControlPanel, BorderLayout.NORTH);
+    measurementPanel.add(tabbedPane, BorderLayout.CENTER);
 
-    getContentPane().add(mainPanel, BorderLayout.CENTER);
+    contentCards.add(welcomePanel, CARD_WELCOME);
+    contentCards.add(measurementPanel, CARD_MEASUREMENT);
+    contentCardLayout.show(contentCards, CARD_WELCOME);
+
+    getContentPane().add(contentCards, BorderLayout.CENTER);
   }
 
   private JPanel createSimulationControlPanel() {
@@ -258,6 +276,7 @@ public class MainWindow extends JFrame {
       resumeBlinkTimer = null;
     }
     simulationControlPanel.setVisible(false);
+    contentCardLayout.show(contentCards, CARD_WELCOME);
 
     dataSensorOrder.set(null);
     dataTableModel.setRowCount(0);
@@ -317,6 +336,7 @@ public class MainWindow extends JFrame {
                       currentPlaybackSpeed = 30.0;
                       playbackStream.startPlayback(vectors, startTime);
                       playbackStream.pause(); // Start paused
+                      contentCardLayout.show(contentCards, CARD_MEASUREMENT);
                       simulationControlPanel.setVisible(true);
                       updateSimulationControlState(playbackStream);
                     });

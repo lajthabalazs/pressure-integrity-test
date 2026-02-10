@@ -95,6 +95,11 @@ public class NewTestWizardViewModel {
     listeners.remove(listener);
   }
 
+  /** Notifies listeners so the UI can refresh (e.g. finalize button state). */
+  public void fireChange() {
+    notifyListeners();
+  }
+
   private void notifyListeners() {
     for (Listener listener : listeners) {
       listener.onStateChanged();
