@@ -2,9 +2,9 @@ package ca.lajthabalazs.pressure_integrity_test.ui.view;
 
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
-import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
+import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorStream;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GridLayout;

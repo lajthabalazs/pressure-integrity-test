@@ -1,6 +1,6 @@
-package ca.lajthabalazs.pressure_integity_test.measurement;
+package ca.lajthabalazs.pressure_integity_test.measurement.streaming;
 
-import ca.lajthabalazs.pressure_integrity_test.measurement.VirtualTimeTracker;
+import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.VirtualTimeTracker;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

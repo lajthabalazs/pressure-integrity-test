@@ -1,4 +1,4 @@
-package ca.lajthabalazs.pressure_integrity_test.measurement;
+package ca.lajthabalazs.pressure_integrity_test.measurement.streaming;
 
 /**
  * Tracks virtual time progression for playback scenarios. Virtual time represents elapsed time in

@@ -1,5 +1,7 @@
-package ca.lajthabalazs.pressure_integrity_test.measurement;
+package ca.lajthabalazs.pressure_integrity_test.measurement.streaming;
 
+import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;

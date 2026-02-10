@@ -1,5 +1,6 @@
 package ca.lajthabalazs.pressure_integity_test.measurement;
 
+import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.config.HumiditySensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.PressureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.SensorConfig;
@@ -11,8 +12,8 @@ import ca.lajthabalazs.pressure_integrity_test.io.TextFileWriter;
 import ca.lajthabalazs.pressure_integrity_test.measurement.CsvMeasurementWriter;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
-import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
+import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;

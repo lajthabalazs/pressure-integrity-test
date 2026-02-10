@@ -1,7 +1,7 @@
-package ca.lajthabalazs.pressure_integity_test.measurement;
+package ca.lajthabalazs.pressure_integity_test.measurement.streaming;
 
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
-import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorStream;
 
 /**
  * Concrete MeasurementVectorStream for testing base class behaviour. Exposes {@link

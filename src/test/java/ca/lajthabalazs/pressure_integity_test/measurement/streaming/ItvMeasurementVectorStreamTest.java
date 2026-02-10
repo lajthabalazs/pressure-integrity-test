@@ -1,10 +1,10 @@
-package ca.lajthabalazs.pressure_integity_test.measurement;
+package ca.lajthabalazs.pressure_integity_test.measurement.streaming;
 
 import ca.lajthabalazs.pressure_integity_test.io.ResourceTextFileReader;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader;
-import ca.lajthabalazs.pressure_integrity_test.measurement.ItvMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
-import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.ItvMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;

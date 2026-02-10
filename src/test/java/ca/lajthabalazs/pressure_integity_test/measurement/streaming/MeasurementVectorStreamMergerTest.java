@@ -1,9 +1,9 @@
-package ca.lajthabalazs.pressure_integity_test.measurement;
+package ca.lajthabalazs.pressure_integity_test.measurement.streaming;
 
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
-import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorStreamMerger;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
+import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorStreamMerger;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;

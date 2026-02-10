@@ -1,12 +1,13 @@
-package ca.lajthabalazs.pressure_integity_test.measurement;
+package ca.lajthabalazs.pressure_integity_test.measurement.processing;
 
+import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.config.CalibrationConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.LinearCalibration;
-import ca.lajthabalazs.pressure_integrity_test.measurement.CalibratedMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
+import ca.lajthabalazs.pressure_integrity_test.measurement.processing.CalibratedMeasurementVectorStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;

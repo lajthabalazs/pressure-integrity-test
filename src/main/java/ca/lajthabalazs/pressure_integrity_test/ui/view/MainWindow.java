@@ -9,7 +9,7 @@ import ca.lajthabalazs.pressure_integrity_test.io.ItvFileReader;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader.FailedToReadFileException;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
-import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorPlaybackStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;

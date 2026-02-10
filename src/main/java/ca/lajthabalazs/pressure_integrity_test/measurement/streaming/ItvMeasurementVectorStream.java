@@ -1,7 +1,8 @@
-package ca.lajthabalazs.pressure_integrity_test.measurement;
+package ca.lajthabalazs.pressure_integrity_test.measurement.streaming;
 
 import ca.lajthabalazs.pressure_integrity_test.io.ItvFileReader;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import java.util.List;
 
 /**
