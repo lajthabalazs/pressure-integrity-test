@@ -40,6 +40,15 @@ public abstract class Measurement {
    */
   public abstract Measurement withNewTimestamp(long newTimestamp);
 
+  /**
+   * Creates a copy of this measurement with a new value in the default unit, preserving timestamp,
+   * source id and unit.
+   *
+   * @param newValueInDefaultUnit the new value in the measurement's default unit
+   * @return a new measurement instance with the given value
+   */
+  public abstract Measurement withNewValueInDefaultUnit(BigDecimal newValueInDefaultUnit);
+
   @Override
   public String toString() {
     return String.format("%s%s", valueInDefaultUnit, defaultUnit);

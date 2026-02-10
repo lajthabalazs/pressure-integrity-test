@@ -14,4 +14,9 @@ public class Humidity extends Measurement {
   public Measurement withNewTimestamp(long newTimestamp) {
     return new Humidity(newTimestamp, getSourceId(), getValueInDefaultUnit());
   }
+
+  @Override
+  public Measurement withNewValueInDefaultUnit(java.math.BigDecimal newValueInDefaultUnit) {
+    return new Humidity(getTimeUtc(), getSourceId(), newValueInDefaultUnit);
+  }
 }

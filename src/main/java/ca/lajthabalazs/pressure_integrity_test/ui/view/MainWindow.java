@@ -11,10 +11,8 @@ import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
-
 import java.awt.Color;
 import java.awt.Dimension;
-
 import java.awt.FlowLayout;
 import java.io.File;
 import java.nio.charset.Charset;

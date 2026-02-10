@@ -57,4 +57,9 @@ public class Pressure extends Measurement {
   public Measurement withNewTimestamp(long newTimestamp) {
     return new Pressure(newTimestamp, getSourceId(), getPascalValue());
   }
+
+  @Override
+  public Measurement withNewValueInDefaultUnit(java.math.BigDecimal newValueInDefaultUnit) {
+    return new Pressure(getTimeUtc(), getSourceId(), newValueInDefaultUnit);
+  }
 }

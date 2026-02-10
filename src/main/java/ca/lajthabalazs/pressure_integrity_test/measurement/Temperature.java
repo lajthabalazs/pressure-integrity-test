@@ -40,4 +40,9 @@ public class Temperature extends Measurement {
   public Measurement withNewTimestamp(long newTimestamp) {
     return new Temperature(newTimestamp, getSourceId(), getCelsiusValue());
   }
+
+  @Override
+  public Measurement withNewValueInDefaultUnit(java.math.BigDecimal newValueInDefaultUnit) {
+    return new Temperature(getTimeUtc(), getSourceId(), newValueInDefaultUnit);
+  }
 }
