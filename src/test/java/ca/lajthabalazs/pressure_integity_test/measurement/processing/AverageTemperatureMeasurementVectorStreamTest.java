@@ -2,6 +2,9 @@ package ca.lajthabalazs.pressure_integity_test.measurement.processing;
 
 import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.config.LocationConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.PressureSensorConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.TemperatureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
@@ -41,8 +44,23 @@ public class AverageTemperatureMeasurementVectorStreamTest {
     return loc;
   }
 
+  private SiteConfig siteConfigFromLocationMap() {
+    List<LocationConfig> locs = new ArrayList<>();
+    for (Map.Entry<String, LocationConfig> e : locationsBySensorId.entrySet()) {
+      LocationConfig loc = e.getValue();
+      TemperatureSensorConfig s = new TemperatureSensorConfig();
+      s.setId(e.getKey());
+      loc.setSensors(List.of(s));
+      locs.add(loc);
+    }
+    SiteConfig cfg = new SiteConfig();
+    cfg.setLocations(locs);
+    return cfg;
+  }
+
   private AverageTemperatureMeasurementVectorStream newStream() {
-    return new AverageTemperatureMeasurementVectorStream(source, locationsBySensorId);
+    return new AverageTemperatureMeasurementVectorStream(
+        source, locationsBySensorId, siteConfigFromLocationMap());
   }
 
   /** Single credible temperature: output contains original plus average (same value). */
@@ -167,7 +185,8 @@ public class AverageTemperatureMeasurementVectorStreamTest {
    */
   @Test
   public void missingLocationOrVolumeFactor_fallsBackToUnitWeight() {
-    // T1 has no entry; T2 has location with null volumeFactor
+    // T1 and T2 in site config; T2 has null volumeFactor (both fall back to weight 1)
+    locationsBySensorId.put("T1", location("L1", null));
     locationsBySensorId.put("T2", location("L2", null));
     AverageTemperatureMeasurementVectorStream stream = newStream();
     stream.subscribe(received::add);
@@ -220,8 +239,10 @@ public class AverageTemperatureMeasurementVectorStreamTest {
   /** Constructor handles null location map by falling back to an empty map. */
   @Test
   public void constructor_nullLocationMapHandledAsEmpty() {
+    SiteConfig emptySite = new SiteConfig();
+    emptySite.setLocations(List.of());
     AverageTemperatureMeasurementVectorStream stream =
-        new AverageTemperatureMeasurementVectorStream(source, null);
+        new AverageTemperatureMeasurementVectorStream(source, null, emptySite);
     Assertions.assertNotNull(stream.listSensors());
     Assertions.assertTrue(stream.listSensors().isEmpty());
     stream.stop();
@@ -276,11 +297,27 @@ public class AverageTemperatureMeasurementVectorStreamTest {
     locationsBySensorId.put("T1", location("L1", "1.0"));
     locationsBySensorId.put("T2", location("L2", "1.0"));
 
-    // Wrap source with average pressure first, then with average temperature
+    // Site config with T1, T2, P1, P2 for the chain
+    LocationConfig l1 = location("L1", "1.0");
+    LocationConfig l2 = location("L2", "1.0");
+    TemperatureSensorConfig t1Config = new TemperatureSensorConfig();
+    t1Config.setId("T1");
+    TemperatureSensorConfig t2Config = new TemperatureSensorConfig();
+    t2Config.setId("T2");
+    PressureSensorConfig p1Config = new PressureSensorConfig();
+    p1Config.setId("P1");
+    PressureSensorConfig p2Config = new PressureSensorConfig();
+    p2Config.setId("P2");
+    l1.setSensors(List.of(t1Config, p1Config, p2Config));
+    l2.setSensors(List.of(t2Config));
+    SiteConfig siteConfig = new SiteConfig();
+    siteConfig.setLocations(List.of(l1, l2));
+
     AveragePressureMeasurementVectorStream avgPressureStream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfig);
     AverageTemperatureMeasurementVectorStream avgTempStream =
-        new AverageTemperatureMeasurementVectorStream(avgPressureStream, locationsBySensorId);
+        new AverageTemperatureMeasurementVectorStream(
+            avgPressureStream, locationsBySensorId, siteConfig);
 
     avgTempStream.subscribe(received::add);
 

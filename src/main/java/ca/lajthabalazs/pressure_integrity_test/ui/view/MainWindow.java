@@ -9,6 +9,7 @@ import ca.lajthabalazs.pressure_integrity_test.io.ItvFileReader;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader.FailedToReadFileException;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
+import ca.lajthabalazs.pressure_integrity_test.measurement.processing.AveragePressureMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.processing.StackedMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
@@ -61,6 +62,8 @@ public class MainWindow extends JFrame {
   private final File rootDirectory;
   private final DefaultTableModel dataTableModel;
   private final JTable dataTable;
+  private final DefaultTableModel computedTableModel;
+  private final JTable computedTable;
 
   /**
    * Sensor order from site config; used for column order and ITV key mapping when appending rows.
@@ -132,6 +135,16 @@ public class MainWindow extends JFrame {
     JPanel dataPanel = new JPanel(new BorderLayout());
     dataPanel.add(dataScroll, BorderLayout.CENTER);
     tabbedPane.addTab("Data", dataPanel);
+
+    computedTableModel = new DefaultTableModel();
+    computedTable = new JTable(computedTableModel);
+    computedTable.setAutoCreateRowSorter(false);
+    computedTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    JScrollPane computedScroll = new JScrollPane(computedTable);
+    computedScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+    JPanel computedPanel = new JPanel(new BorderLayout());
+    computedPanel.add(computedScroll, BorderLayout.CENTER);
+    tabbedPane.addTab("Computed", computedPanel);
 
     JPanel measurementPanel = new JPanel(new BorderLayout());
     simulationControlPanel = createSimulationControlPanel();
@@ -287,6 +300,7 @@ public class MainWindow extends JFrame {
 
     dataSensorOrder.set(null);
     dataTableModel.setRowCount(0);
+    computedTableModel.setRowCount(0);
 
     List<SensorConfig> sensors = siteConfig.getSensors();
     dataSensorOrder.set(sensors);
@@ -300,6 +314,12 @@ public class MainWindow extends JFrame {
     dataTableModel.setColumnIdentifiers(columnNames.toArray());
     for (int i = 0; i < dataTable.getColumnCount(); i++) {
       dataTable.getColumnModel().getColumn(i).setPreferredWidth(DEFAULT_COLUMN_WIDTH_PX);
+    }
+
+    // Computed table: currently shows average pressure only.
+    computedTableModel.setColumnIdentifiers(new Object[] {"Time", "Average pressure (Pa)"});
+    for (int i = 0; i < computedTable.getColumnCount(); i++) {
+      computedTable.getColumnModel().getColumn(i).setPreferredWidth(DEFAULT_COLUMN_WIDTH_PX);
     }
 
     String path = itvFile.toPath().toAbsolutePath().normalize().toString();
@@ -318,6 +338,7 @@ public class MainWindow extends JFrame {
           SwingUtilities.invokeLater(
               () -> {
                 appendVectorToTable(vector);
+                appendComputedToTable(vector);
                 scrollDataTableToBottom();
               });
         });
@@ -374,31 +395,27 @@ public class MainWindow extends JFrame {
     Object[] row = new Object[sensorOrder.size() + 1];
     row[0] = timeStr;
     for (int i = 0; i < sensorOrder.size(); i++) {
-      String itvKey = siteSensorIdToItvKey(sensorOrder.get(i));
-      Measurement m = vector.getMeasurementsMap().get(itvKey);
+      String sensorId = sensorOrder.get(i).getId();
+      Measurement m = sensorId != null ? vector.getMeasurementsMap().get(sensorId) : null;
       row[i + 1] = m != null ? m.getValueInDefaultUnit().toPlainString() : "";
     }
     dataTableModel.addRow(row);
   }
 
-  /** Maps site config sensor ID to the ITV measurement key (p1, p2, T1..T61, fi1..fi10). */
-  private static String siteSensorIdToItvKey(SensorConfig sensor) {
-    String type = sensor.getType();
-    String id = sensor.getId();
-    if (id == null) return "";
-    if ("pressure".equals(type)) return id.toLowerCase();
-    if ("humidity".equals(type)) {
-      String u = id.toUpperCase();
-      if (u.startsWith("RH")) {
-        try {
-          return "fi" + id.substring(2).trim();
-        } catch (Exception ignored) {
-          // fall through
-        }
-      }
-      return "fi" + id;
-    }
-    return id; // temperature or other
+  private void appendComputedToTable(MeasurementVector vector) {
+    String timeStr = TIME_FORMAT.format(Instant.ofEpochMilli(vector.getTimeUtc()));
+    Measurement avgPressure =
+        vector.getMeasurementsMap().values().stream()
+            .filter(
+                m ->
+                    AveragePressureMeasurementVectorStream.AVG_PRESSURE_SOURCE_ID.equals(
+                        m.getSourceId()))
+            .findFirst()
+            .orElse(null);
+    Object[] row = new Object[2];
+    row[0] = timeStr;
+    row[1] = avgPressure != null ? avgPressure.getValueInDefaultUnit().toPlainString() : "";
+    computedTableModel.addRow(row);
   }
 
   private void scrollDataTableToBottom() {

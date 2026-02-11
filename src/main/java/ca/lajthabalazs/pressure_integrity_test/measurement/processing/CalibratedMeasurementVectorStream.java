@@ -41,32 +41,30 @@ public class CalibratedMeasurementVectorStream extends MeasurementVectorStream {
     this.source = source;
     this.calibrationConfig =
         calibrationConfig != null ? calibrationConfig : new CalibrationConfig();
-    this.sourceSubscription =
-        source.subscribe(
-            vector -> {
-              if (vector.hasSevereError()) {
-                // Do not attempt calibration on invalid vectors – pass through unchanged.
-                publish(vector);
-                return;
-              }
-              Map<String, Measurement> raw = vector.getMeasurementsMap();
-              List<Measurement> calibrated = new ArrayList<>(raw.size());
-              for (Measurement m : raw.values()) {
-                LinearCalibration cal =
-                    this.calibrationConfig.getCalibrationForSensor(m.getSourceId());
-                if (cal != null) {
-                  BigDecimal calibratedValue = cal.getCalibratedValue(m.getValueInDefaultUnit());
-                  if (calibratedValue != null) {
-                    calibrated.add(m.withNewValueInDefaultUnit(calibratedValue));
-                  } else {
-                    calibrated.add(m);
-                  }
-                } else {
-                  calibrated.add(m);
-                }
-              }
-              publish(new MeasurementVector(vector.getTimeUtc(), calibrated, vector.getErrors()));
-            });
+    this.sourceSubscription = source.subscribe(this::computeAndPublish);
+  }
+
+  private void computeAndPublish(MeasurementVector vector) {
+    if (vector.hasSevereError()) {
+      publish(vector);
+      return;
+    }
+    Map<String, Measurement> raw = vector.getMeasurementsMap();
+    List<Measurement> calibrated = new ArrayList<>(raw.size());
+    for (Measurement m : raw.values()) {
+      LinearCalibration cal = this.calibrationConfig.getCalibrationForSensor(m.getSourceId());
+      if (cal != null) {
+        BigDecimal calibratedValue = cal.getCalibratedValue(m.getValueInDefaultUnit());
+        if (calibratedValue != null) {
+          calibrated.add(m.withNewValueInDefaultUnit(calibratedValue));
+        } else {
+          calibrated.add(m);
+        }
+      } else {
+        calibrated.add(m);
+      }
+    }
+    publish(new MeasurementVector(vector.getTimeUtc(), calibrated, vector.getErrors()));
   }
 
   @Override

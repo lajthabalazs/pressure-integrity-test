@@ -1,6 +1,7 @@
 package ca.lajthabalazs.pressure_integrity_test.measurement.processing;
 
 import ca.lajthabalazs.pressure_integrity_test.config.LocationConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
@@ -16,10 +17,12 @@ import java.util.Map;
  * A measurement vector stream that adds a volume‑weighted average temperature to each incoming
  * vector.
  *
- * <p>For every {@link MeasurementVector} from the wrapped {@link #source} stream, this class:
+ * <p>Uses {@link MeasurementFilter#filter} to consider only site-config sensors before computation.
+ * For every {@link MeasurementVector} from the wrapped {@link #source}:
  *
  * <ul>
- *   <li>Collects all {@link Temperature} measurements
+ *   <li>Filters to site-config sensors, then collects {@link Temperature} measurements from that
+ *       view
  *   <li>Looks up a volume factor for each sensor from its {@link LocationConfig} via a location map
  *   <li>Filters out temperatures outside the {@code [0, 100]} °C range (credibility check)
  *   <li>Computes a volume‑weighted harmonic mean in Celsius using the algorithm from the original
@@ -29,9 +32,8 @@ import java.util.Map;
  *       denom  = Σ (CF_j * v_j / T_j)
  *       T_aver = Vsum / denom
  *       </pre>
- *   <li>Publishes a new vector containing all original measurements plus one synthetic {@link
- *       Temperature} measurement with source id {@link #AVG_TEMPERATURE_SOURCE_ID} and value {@code
- *       T_aver} (in °C)
+ *   <li>Publishes the <em>original</em> vector with one added synthetic {@link Temperature} ({@link
+ *       #AVG_TEMPERATURE_SOURCE_ID}, {@code T_aver} in °C)
  * </ul>
  *
  * <p>If a vector has no credible temperature measurements or no usable volume factors, it is not
@@ -54,6 +56,7 @@ public class AverageTemperatureMeasurementVectorStream extends MeasurementVector
   private static final MathContext MC = new MathContext(16, RoundingMode.HALF_UP);
 
   private final MeasurementVectorStream source;
+  private final SiteConfig siteConfig;
 
   /**
    * Mapping from sensor id to its {@link LocationConfig}. The {@code volumeFactor} on the location
@@ -64,34 +67,38 @@ public class AverageTemperatureMeasurementVectorStream extends MeasurementVector
   private MeasurementVectorStream.Subscription sourceSubscription;
 
   /**
-   * Creates an average‑temperature stream that wraps the given source.
+   * Creates an average‑temperature stream that wraps the given source and uses only site-config
+   * sensors for the average (via {@link MeasurementFilter#filter}).
    *
    * @param source the underlying measurement stream
    * @param locationBySensorId mapping from sensor source id to its {@link LocationConfig}; if a
    *     sensor id is missing or its location has a null volumeFactor, it is treated as having
    *     volume factor {@code 1}
+   * @param siteConfig site configuration; only its sensors are used for the average
    */
   public AverageTemperatureMeasurementVectorStream(
-      MeasurementVectorStream source, Map<String, LocationConfig> locationBySensorId) {
+      MeasurementVectorStream source,
+      Map<String, LocationConfig> locationBySensorId,
+      SiteConfig siteConfig) {
     this.source = source;
     this.locationBySensorId = locationBySensorId != null ? locationBySensorId : Map.of();
-    this.sourceSubscription =
-        source.subscribe(
-            vector -> {
-              if (vector.hasSevereError()) {
-                // Propagate invalid vectors without further processing.
-                publish(vector);
-                return;
-              }
-              Temperature avg = computeAverageTemperature(vector);
-              if (avg == null) {
-                // No credible temperatures or no usable weights – skip publishing
-                return;
-              }
-              List<Measurement> out = new ArrayList<>(vector.getMeasurements());
-              out.add(avg);
-              publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
-            });
+    this.siteConfig = siteConfig;
+    this.sourceSubscription = source.subscribe(this::computeAndPublish);
+  }
+
+  private void computeAndPublish(MeasurementVector vector) {
+    if (vector.hasSevereError()) {
+      publish(vector);
+      return;
+    }
+    MeasurementVector filtered = MeasurementFilter.filter(vector, siteConfig);
+    Temperature avg = computeAverageTemperature(filtered);
+    if (avg == null) {
+      return;
+    }
+    List<Measurement> out = new ArrayList<>(vector.getMeasurements());
+    out.add(avg);
+    publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
   }
 
   private Temperature computeAverageTemperature(MeasurementVector vector) {
@@ -118,7 +125,7 @@ public class AverageTemperatureMeasurementVectorStream extends MeasurementVector
         continue;
       }
       LocationConfig location = locationBySensorId.get(t.getSourceId());
-      BigDecimal v = location != null ? location.getVolumeFactor() : null;
+      BigDecimal v = location.getVolumeFactor();
       if (v == null) {
         v = BigDecimal.ONE; // fallback weight if missing
       }

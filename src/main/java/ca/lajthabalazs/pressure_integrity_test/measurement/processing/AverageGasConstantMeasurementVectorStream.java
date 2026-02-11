@@ -1,6 +1,7 @@
 package ca.lajthabalazs.pressure_integrity_test.measurement.processing;
 
 import ca.lajthabalazs.pressure_integrity_test.config.LocationConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
 import ca.lajthabalazs.pressure_integrity_test.measurement.GasConstant;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
@@ -37,8 +38,10 @@ import java.util.Map;
  *       °C temperature)
  *   <li>Computes a volume‑weighted harmonic mean of the per‑location R values using the location's
  *       volume factor as weight
- *   <li>Publishes a new vector containing all original measurements plus one synthetic {@link
- *       GasConstant} with source id {@link #AVG_R_SOURCE_ID}
+ *   <li>Uses {@link MeasurementFilter#filter} for humidity/temperature (site-config only); reads
+ *       {@link AveragePressureMeasurementVectorStream#AVG_PRESSURE_SOURCE_ID} from the original
+ *       vector. Publishes the <em>original</em> vector plus one synthetic {@link GasConstant}
+ *       ({@link #AVG_R_SOURCE_ID}).
  * </ul>
  *
  * <p>If there is no credible data (missing average pressure, no valid humidity/temperature pairs,
@@ -59,6 +62,7 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
   private static final MathContext MC = new MathContext(16, RoundingMode.HALF_UP);
 
   private final MeasurementVectorStream source;
+  private final SiteConfig siteConfig;
 
   /**
    * Mapping from sensor id to its {@link LocationConfig}. Used to obtain the volume factor for the
@@ -75,7 +79,9 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
   private MeasurementVectorStream.Subscription sourceSubscription;
 
   /**
-   * Creates an average‑R stream that wraps the given source.
+   * Creates an average‑R stream that wraps the given source and uses only site-config sensors for
+   * humidity/temperature (via {@link MeasurementFilter#filter}); average pressure is read from the
+   * incoming vector.
    *
    * @param source the underlying measurement stream (typically the output of the
    *     AveragePressure→AverageTemperature chain)
@@ -83,39 +89,40 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
    *     missing or its volume factor is null, a volume factor of {@code 1} is assumed
    * @param humidityToTemperatureSensorId mapping from humidity sensor id to its paired temperature
    *     sensor id
+   * @param siteConfig site configuration; only its sensors are used for humidity/temperature in R
    */
   public AverageGasConstantMeasurementVectorStream(
       MeasurementVectorStream source,
       Map<String, LocationConfig> locationBySensorId,
-      Map<String, String> humidityToTemperatureSensorId) {
+      Map<String, String> humidityToTemperatureSensorId,
+      SiteConfig siteConfig) {
     this.source = source;
-    // Keep references to the provided maps so that callers can update them dynamically,
-    // mirroring the behaviour of AverageTemperatureMeasurementVectorStream.
     this.locationBySensorId = locationBySensorId != null ? locationBySensorId : Map.of();
     this.humidityToTemperatureSensorId =
         humidityToTemperatureSensorId != null ? humidityToTemperatureSensorId : Map.of();
-    this.sourceSubscription =
-        source.subscribe(
-            vector -> {
-              if (vector.hasSevereError()) {
-                // Downstream of a severe error – pass vector through unchanged.
-                publish(vector);
-                return;
-              }
-              GasConstant avg = computeAverageGasConstant(vector);
-              if (avg == null) {
-                // No credible data – skip publishing
-                return;
-              }
-              List<Measurement> out = new ArrayList<>(vector.getMeasurements());
-              out.add(avg);
-              publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
-            });
+    this.siteConfig = siteConfig;
+    this.sourceSubscription = source.subscribe(this::computeAndPublish);
   }
 
-  private GasConstant computeAverageGasConstant(MeasurementVector vector) {
+  private void computeAndPublish(MeasurementVector vector) {
+    if (vector.hasSevereError()) {
+      publish(vector);
+      return;
+    }
+    MeasurementVector filtered = MeasurementFilter.filter(vector, siteConfig);
+    GasConstant avg = computeAverageGasConstant(vector, filtered);
+    if (avg == null) {
+      return;
+    }
+    List<Measurement> out = new ArrayList<>(vector.getMeasurements());
+    out.add(avg);
+    publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
+  }
+
+  private GasConstant computeAverageGasConstant(
+      MeasurementVector vectorWithAvgPressure, MeasurementVector filteredSiteSensors) {
     Pressure avgPressure =
-        vector.getMeasurementsMap().values().stream()
+        vectorWithAvgPressure.getMeasurementsMap().values().stream()
             .filter(m -> m instanceof Pressure)
             .map(m -> (Pressure) m)
             .filter(
@@ -125,15 +132,15 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
             .findFirst()
             .orElse(null);
 
-    if (avgPressure == null || avgPressure.getPascalValue() == null) {
+    if (avgPressure == null) {
       return null;
     }
 
     BigDecimal presAver = avgPressure.getPascalValue();
 
-    // Index temperature measurements by sensor id for fast lookup.
+    // Index temperature measurements by sensor id for fast lookup (from site-config filtered view).
     Map<String, Temperature> temperatureById = new HashMap<>();
-    for (Measurement m : vector.getMeasurementsMap().values()) {
+    for (Measurement m : filteredSiteSensors.getMeasurementsMap().values()) {
       if (m instanceof Temperature) {
         temperatureById.put(m.getSourceId(), (Temperature) m);
       }
@@ -142,7 +149,7 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
     BigDecimal sumWeights = BigDecimal.ZERO;
     BigDecimal sumWeightsOverR = BigDecimal.ZERO;
 
-    for (Measurement m : vector.getMeasurementsMap().values()) {
+    for (Measurement m : filteredSiteSensors.getMeasurementsMap().values()) {
       if (!(m instanceof Humidity humidity)) {
         continue;
       }
@@ -151,9 +158,6 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
 
       String humidityId = humidity.getSourceId();
       String tempId = humidityToTemperatureSensorId.get(humidityId);
-      if (tempId == null) {
-        continue;
-      }
 
       Temperature temp = temperatureById.get(tempId);
 
@@ -162,7 +166,6 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
       // Volume factor from the location of the paired temperature sensor; default to 1 if missing.
       LocationConfig location = locationBySensorId.get(tempId);
       BigDecimal volumeFactor = location.getVolumeFactor();
-
       if (volumeFactor.signum() <= 0) {
         continue;
       }
@@ -176,7 +179,7 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
     }
 
     BigDecimal rMean = sumWeights.divide(sumWeightsOverR, MC);
-    return new GasConstant(vector.getTimeUtc(), AVG_R_SOURCE_ID, rMean);
+    return new GasConstant(vectorWithAvgPressure.getTimeUtc(), AVG_R_SOURCE_ID, rMean);
   }
 
   /**

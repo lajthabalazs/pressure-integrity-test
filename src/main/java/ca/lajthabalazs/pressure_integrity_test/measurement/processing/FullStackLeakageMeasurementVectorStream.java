@@ -15,15 +15,16 @@ import java.util.Map;
 
 /**
  * A measurement vector stream that wraps a source stream and chains site-config–driven processing
- * steps: believability filter, optional calibration, average pressure, average temperature, average
- * gas constant (R), and leakage.
+ * steps: believability (add errors), optional calibration, average pressure, average temperature,
+ * average gas constant (R), and leakage. Each step that needs site-config sensors uses {@link
+ * MeasurementFilter#filter} before computation and adds results/errors to the input vector, leaving
+ * all values intact.
  *
- * <p>Construction requires a {@link SiteConfig} (for sensor map, location map, and
- * humidity→temperature pairing), an optional {@link CalibrationConfig} (if null, the calibration
- * stage is omitted from the pipeline), and a source {@link MeasurementVectorStream}. The chain is:
+ * <p>Construction requires a {@link SiteConfig}, an optional {@link CalibrationConfig}, and a
+ * source {@link MeasurementVectorStream}. The chain is:
  *
  * <ol>
- *   <li>{@link BelievabilityFilteredMeasurementVectorStream} – filter by sensor valid range
+ *   <li>{@link BelievabilityFilteredMeasurementVectorStream} – adds errors for out-of-range
  *   <li>{@link CalibratedMeasurementVectorStream} – only when calibration config is non-null
  *   <li>{@link AveragePressureMeasurementVectorStream}
  *   <li>{@link AverageTemperatureMeasurementVectorStream}
@@ -60,12 +61,11 @@ public final class FullStackLeakageMeasurementVectorStream extends MeasurementVe
       SiteConfig siteConfig, CalibrationConfig calibrationConfig, MeasurementVectorStream source) {
     this.siteConfig = siteConfig;
 
-    Map<String, SensorConfig> sensorMapById = buildSensorMapById(siteConfig);
     Map<String, LocationConfig> locationBySensorId = buildLocationBySensorId(siteConfig);
     Map<String, String> humidityToTemperatureSensorId =
         buildHumidityToTemperatureSensorId(siteConfig);
 
-    this.believability = new BelievabilityFilteredMeasurementVectorStream(source, sensorMapById);
+    this.believability = new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     MeasurementVectorStream afterBelievability;
     if (calibrationConfig != null) {
       this.calibrated = new CalibratedMeasurementVectorStream(believability, calibrationConfig);
@@ -74,22 +74,16 @@ public final class FullStackLeakageMeasurementVectorStream extends MeasurementVe
       this.calibrated = null;
       afterBelievability = believability;
     }
-    this.averagePressure = new AveragePressureMeasurementVectorStream(afterBelievability);
+    this.averagePressure =
+        new AveragePressureMeasurementVectorStream(afterBelievability, siteConfig);
     this.averageTemperature =
-        new AverageTemperatureMeasurementVectorStream(averagePressure, locationBySensorId);
+        new AverageTemperatureMeasurementVectorStream(
+            averagePressure, locationBySensorId, siteConfig);
     this.averageGasConstant =
         new AverageGasConstantMeasurementVectorStream(
-            averageTemperature, locationBySensorId, humidityToTemperatureSensorId);
+            averageTemperature, locationBySensorId, humidityToTemperatureSensorId, siteConfig);
     this.leakage = new LeakageMeasurementVectorStream(averageGasConstant);
     this.tailSubscription = leakage.subscribe(this::publish);
-  }
-
-  private static Map<String, SensorConfig> buildSensorMapById(SiteConfig siteConfig) {
-    Map<String, SensorConfig> map = new LinkedHashMap<>();
-    for (SensorConfig s : siteConfig.getSensors()) {
-      map.put(s.getId(), s);
-    }
-    return map;
   }
 
   private static Map<String, LocationConfig> buildLocationBySensorId(SiteConfig siteConfig) {

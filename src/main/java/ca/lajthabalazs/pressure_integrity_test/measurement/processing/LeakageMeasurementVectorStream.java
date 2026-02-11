@@ -61,36 +61,36 @@ public class LeakageMeasurementVectorStream extends MeasurementVectorStream {
    */
   public LeakageMeasurementVectorStream(MeasurementVectorStream source) {
     this.source = source;
-    this.sourceSubscription =
-        source.subscribe(
-            vector -> {
-              if (vector.hasSevereError()) {
-                // Do not attempt leakage calculation on invalid vectors – pass through.
-                publish(vector);
-                return;
-              }
-              Double rho = densityFromVector(vector);
-              if (rho == null) {
-                return;
-              }
-              long t = vector.getTimeUtc();
-              BigDecimal leakageValue;
-              if (prevTimeUtc == null) {
-                leakageValue = BigDecimal.ONE.negate();
-              } else {
-                Double L = leakageFromTwoPoints(prevRho, prevTimeUtc, rho, t);
-                if (L == null) {
-                  return;
-                }
-                leakageValue = BigDecimal.valueOf(L).setScale(6, RoundingMode.HALF_UP);
-              }
-              prevTimeUtc = t;
-              prevRho = rho;
-              Leakage leakage = new Leakage(vector.getTimeUtc(), LEAKAGE_SOURCE_ID, leakageValue);
-              List<Measurement> out = new ArrayList<>(vector.getMeasurements());
-              out.add(leakage);
-              publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
-            });
+    this.sourceSubscription = source.subscribe(this::computeAndPublish);
+  }
+
+  private void computeAndPublish(MeasurementVector vector) {
+    if (vector.hasSevereError()) {
+      // Do not attempt leakage calculation on invalid vectors – pass through.
+      publish(vector);
+      return;
+    }
+    Double rho = densityFromVector(vector);
+    if (rho == null) {
+      return;
+    }
+    long t = vector.getTimeUtc();
+    BigDecimal leakageValue;
+    if (prevTimeUtc == null) {
+      leakageValue = BigDecimal.ONE.negate();
+    } else {
+      Double L = leakageFromTwoPoints(prevRho, prevTimeUtc, rho, t);
+      if (L == null) {
+        return;
+      }
+      leakageValue = BigDecimal.valueOf(L).setScale(6, RoundingMode.HALF_UP);
+    }
+    prevTimeUtc = t;
+    prevRho = rho;
+    Leakage leakage = new Leakage(vector.getTimeUtc(), LEAKAGE_SOURCE_ID, leakageValue);
+    List<Measurement> out = new ArrayList<>(vector.getMeasurements());
+    out.add(leakage);
+    publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
   }
 
   /**

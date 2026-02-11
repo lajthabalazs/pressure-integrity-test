@@ -2,8 +2,10 @@ package ca.lajthabalazs.pressure_integity_test.measurement.processing;
 
 import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.config.HumiditySensorConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.LocationConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.PressureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.SensorConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.TemperatureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.ValidRange;
 import ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity;
@@ -16,9 +18,7 @@ import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
 import ca.lajthabalazs.pressure_integrity_test.measurement.processing.BelievabilityFilteredMeasurementVectorStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,12 +35,14 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
     received = new ArrayList<>();
   }
 
-  private static Map<String, SensorConfig> sensorMap(
-      TemperatureSensorConfig t24, HumiditySensorConfig rh4) {
-    Map<String, SensorConfig> map = new LinkedHashMap<>();
-    map.put("T24", t24);
-    map.put("RH4", rh4);
-    return map;
+  /** Builds a SiteConfig with one location containing the given sensors. */
+  private static SiteConfig siteConfigWithSensors(SensorConfig... sensors) {
+    LocationConfig loc = new LocationConfig();
+    loc.setId("L1");
+    loc.setSensors(List.of(sensors));
+    SiteConfig cfg = new SiteConfig();
+    cfg.setLocations(List.of(loc));
+    return cfg;
   }
 
   private static TemperatureSensorConfig temperatureSensorWithRange(
@@ -69,11 +71,11 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
   public void valueWithinRange_includedInOutput() {
     TemperatureSensorConfig t24 =
         temperatureSensorWithRange(new BigDecimal("0"), new BigDecimal("80"));
-    Map<String, SensorConfig> sensorMap =
-        sensorMap(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
+    SiteConfig siteConfig =
+        siteConfigWithSensors(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature m = new Temperature(1000L, "T24", new BigDecimal("50"));
@@ -89,43 +91,48 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
     filter.stop();
   }
 
-  /** When a measurement is below the minimum, it is excluded. */
+  /** When a measurement is below the minimum, it is kept and an error is added. */
   @Test
   public void valueBelowMin_excludedFromOutput() {
     TemperatureSensorConfig t24 =
         temperatureSensorWithRange(new BigDecimal("0"), new BigDecimal("80"));
-    Map<String, SensorConfig> sensorMap =
-        sensorMap(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
+    SiteConfig siteConfig =
+        siteConfigWithSensors(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature m = new Temperature(1000L, "T24", new BigDecimal("-10"));
     source.publishToSubscribers(new MeasurementVector(1000L, List.of(m)));
 
     Assertions.assertEquals(1, received.size());
-    Assertions.assertEquals(0, received.get(0).getMeasurements().size());
+    Assertions.assertEquals(1, received.get(0).getMeasurements().size());
+    Assertions.assertEquals(1, received.get(0).getErrors().size());
+    Assertions.assertEquals(ErrorSeverity.WARNING, received.get(0).getErrors().get(0).severity());
+    Assertions.assertEquals("T24", received.get(0).getErrors().get(0).sensorId());
     filter.stop();
   }
 
-  /** When a measurement is above the maximum, it is excluded. */
+  /** When a measurement is above the maximum, it is kept and an error is added. */
   @Test
   public void valueAboveMax_excludedFromOutput() {
     TemperatureSensorConfig t24 =
         temperatureSensorWithRange(new BigDecimal("0"), new BigDecimal("80"));
-    Map<String, SensorConfig> sensorMap =
-        sensorMap(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
+    SiteConfig siteConfig =
+        siteConfigWithSensors(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature m = new Temperature(1000L, "T24", new BigDecimal("90"));
     source.publishToSubscribers(new MeasurementVector(1000L, List.of(m)));
 
     Assertions.assertEquals(1, received.size());
-    Assertions.assertEquals(0, received.get(0).getMeasurements().size());
+    Assertions.assertEquals(1, received.get(0).getMeasurements().size());
+    Assertions.assertEquals(1, received.get(0).getErrors().size());
+    Assertions.assertEquals("T24", received.get(0).getErrors().get(0).sensorId());
     filter.stop();
   }
 
@@ -134,11 +141,11 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
   public void valueAtMinAndMax_included() {
     TemperatureSensorConfig t24 =
         temperatureSensorWithRange(new BigDecimal("0"), new BigDecimal("80"));
-    Map<String, SensorConfig> sensorMap =
-        sensorMap(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
+    SiteConfig siteConfig =
+        siteConfigWithSensors(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature atMin = new Temperature(1000L, "T24", BigDecimal.ZERO);
@@ -150,16 +157,16 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
     filter.stop();
   }
 
-  /** Multiple sensors: only those within range are included. */
+  /** Multiple sensors: all kept; error added for out-of-range. */
   @Test
   public void multipleSensors_onlyInRangeIncluded() {
     TemperatureSensorConfig t24 =
         temperatureSensorWithRange(new BigDecimal("0"), new BigDecimal("80"));
     HumiditySensorConfig rh4 = humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100"));
-    Map<String, SensorConfig> sensorMap = sensorMap(t24, rh4);
+    SiteConfig siteConfig = siteConfigWithSensors(t24, rh4);
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature tIn = new Temperature(2000L, "T24", new BigDecimal("20"));
@@ -167,18 +174,19 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
     source.publishToSubscribers(new MeasurementVector(2000L, List.of(tIn, hOut)));
 
     Assertions.assertEquals(1, received.size());
-    Assertions.assertEquals(1, received.get(0).getMeasurements().size());
-    Assertions.assertEquals("T24", received.get(0).getMeasurements().get(0).getSourceId());
+    Assertions.assertEquals(2, received.get(0).getMeasurements().size());
+    Assertions.assertEquals(1, received.get(0).getErrors().size());
+    Assertions.assertEquals("RH4", received.get(0).getErrors().get(0).sensorId());
     filter.stop();
   }
 
-  /** Sensor not in map (no valid range) is passed through. */
+  /** Sensor not in site config (no valid range) is passed through. */
   @Test
   public void sensorNotInMap_passedThrough() {
-    Map<String, SensorConfig> sensorMap = new LinkedHashMap<>(); // empty or only some sensors
+    SiteConfig siteConfig = new SiteConfig(); // empty: no sensors to check
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature m = new Temperature(1000L, "T1", new BigDecimal("1000"));
@@ -194,11 +202,11 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
   @Test
   public void timestampPreserved() {
     TemperatureSensorConfig t24 = temperatureSensorWithRange(BigDecimal.ZERO, new BigDecimal("80"));
-    Map<String, SensorConfig> sensorMap =
-        sensorMap(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
+    SiteConfig siteConfig =
+        siteConfigWithSensors(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     long ts = 12345L;
@@ -214,7 +222,7 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
   @Test
   public void listSensors_delegatesToSource() {
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, Map.of());
+        new BelievabilityFilteredMeasurementVectorStream(source, new SiteConfig());
     Assertions.assertNotNull(filter.listSensors());
     Assertions.assertTrue(filter.listSensors().isEmpty());
     filter.stop();
@@ -225,11 +233,11 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
   public void severeError_passesThroughUnchanged() {
     TemperatureSensorConfig t24 =
         temperatureSensorWithRange(new BigDecimal("0"), new BigDecimal("80"));
-    Map<String, SensorConfig> sensorMap =
-        sensorMap(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
+    SiteConfig siteConfig =
+        siteConfigWithSensors(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature t = new Temperature(1000L, "T24", new BigDecimal("200"));
@@ -245,21 +253,6 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
     filter.stop();
   }
 
-  /** Constructor with null sensorMapById uses empty map; all measurements passed through. */
-  @Test
-  public void nullSensorMapById_usesEmptyMap_allMeasurementsPassedThrough() {
-    BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, null);
-    filter.subscribe(received::add);
-
-    Temperature m = new Temperature(1000L, "T24", new BigDecimal("50"));
-    source.publishToSubscribers(new MeasurementVector(1000L, List.of(m)));
-
-    Assertions.assertEquals(1, received.size());
-    Assertions.assertEquals(1, received.get(0).getMeasurements().size());
-    filter.stop();
-  }
-
   /** When valid range has null min, measurement is passed through (no range check). */
   @Test
   public void validRangeWithNullMin_passesThrough() {
@@ -269,11 +262,10 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
     r.setMin(null);
     r.setMax(new BigDecimal("80"));
     t24.setValidRange(r);
-    Map<String, SensorConfig> sensorMap = new LinkedHashMap<>();
-    sensorMap.put("T24", t24);
+    SiteConfig siteConfig = siteConfigWithSensors(t24);
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature m = new Temperature(1000L, "T24", new BigDecimal("50"));
@@ -293,11 +285,10 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
     r.setMin(BigDecimal.ZERO);
     r.setMax(null);
     t24.setValidRange(r);
-    Map<String, SensorConfig> sensorMap = new LinkedHashMap<>();
-    sensorMap.put("T24", t24);
+    SiteConfig siteConfig = siteConfigWithSensors(t24);
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Temperature m = new Temperature(1000L, "T24", new BigDecimal("50"));
@@ -308,22 +299,26 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
     filter.stop();
   }
 
-  /** When measurement value is null and sensor has valid range, measurement is excluded. */
+  /**
+   * When measurement value is null and sensor has valid range, measurement is kept and error added.
+   */
   @Test
   public void measurementWithNullValue_excludedWhenSensorHasRange() {
     TemperatureSensorConfig t24 = temperatureSensorWithRange(BigDecimal.ZERO, new BigDecimal("80"));
-    Map<String, SensorConfig> sensorMap =
-        sensorMap(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
+    SiteConfig siteConfig =
+        siteConfigWithSensors(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Measurement nullValueMeasurement = new Temperature(1000L, "T24", null);
     source.publishToSubscribers(new MeasurementVector(1000L, List.of(nullValueMeasurement)));
 
     Assertions.assertEquals(1, received.size());
-    Assertions.assertEquals(0, received.get(0).getMeasurements().size());
+    Assertions.assertEquals(1, received.get(0).getMeasurements().size());
+    Assertions.assertEquals(1, received.get(0).getErrors().size());
+    Assertions.assertEquals("T24", received.get(0).getErrors().get(0).sensorId());
     filter.stop();
   }
 
@@ -335,11 +330,10 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
   public void pressureSensorInMap_noValidRange_measurementPassedThrough() {
     PressureSensorConfig p1 = new PressureSensorConfig();
     p1.setId("P1");
-    Map<String, SensorConfig> sensorMap = new LinkedHashMap<>();
-    sensorMap.put("P1", p1);
+    SiteConfig siteConfig = siteConfigWithSensors(p1);
 
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+        new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
     filter.subscribe(received::add);
 
     Pressure m = new Pressure(1000L, "P1", new BigDecimal("101325"));
@@ -355,7 +349,7 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
   @Test
   public void stop_idempotent_secondCallDoesNotThrow() {
     BelievabilityFilteredMeasurementVectorStream filter =
-        new BelievabilityFilteredMeasurementVectorStream(source, Map.of());
+        new BelievabilityFilteredMeasurementVectorStream(source, new SiteConfig());
     filter.stop();
     Assertions.assertDoesNotThrow(filter::stop);
   }

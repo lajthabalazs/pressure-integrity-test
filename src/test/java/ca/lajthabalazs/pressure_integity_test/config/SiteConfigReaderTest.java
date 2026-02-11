@@ -53,7 +53,7 @@ public class SiteConfigReaderTest {
 
     Assertions.assertInstanceOf(PressureSensorConfig.class, sensors.get(0));
     PressureSensorConfig p1 = (PressureSensorConfig) sensors.get(0);
-    Assertions.assertEquals("P1", p1.getId());
+    Assertions.assertEquals("p1", p1.getId());
     Assertions.assertEquals("A301", p1.getLocationId());
     Assertions.assertEquals("pressure", p1.getType());
     Assertions.assertEquals("Pa", p1.getUnits());
@@ -71,7 +71,7 @@ public class SiteConfigReaderTest {
 
     Assertions.assertInstanceOf(HumiditySensorConfig.class, sensors.get(2));
     HumiditySensorConfig rh4 = (HumiditySensorConfig) sensors.get(2);
-    Assertions.assertEquals("RH4", rh4.getId());
+    Assertions.assertEquals("fi4", rh4.getId());
     Assertions.assertEquals("A301", rh4.getLocationId());
     Assertions.assertEquals("humidity", rh4.getType());
     Assertions.assertEquals(0, BigDecimal.ZERO.compareTo(rh4.getValidRange().getMin()));

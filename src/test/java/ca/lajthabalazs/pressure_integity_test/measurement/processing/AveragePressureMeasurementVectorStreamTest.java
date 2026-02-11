@@ -1,6 +1,10 @@
 package ca.lajthabalazs.pressure_integity_test.measurement.processing;
 
 import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.config.LocationConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.PressureSensorConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SensorConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
 import ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
@@ -21,18 +25,35 @@ public class AveragePressureMeasurementVectorStreamTest {
 
   private TestMeasurementVectorStream source;
   private List<MeasurementVector> received;
+  private SiteConfig siteConfigWithP1P2;
 
   @BeforeEach
   public void setUp() {
     source = new TestMeasurementVectorStream();
     received = new ArrayList<>();
+    siteConfigWithP1P2 = siteConfigWithPressureSensorIds("P1", "P2");
+  }
+
+  private static SiteConfig siteConfigWithPressureSensorIds(String... ids) {
+    LocationConfig loc = new LocationConfig();
+    loc.setId("L1");
+    List<SensorConfig> sensors = new ArrayList<>();
+    for (String id : ids) {
+      PressureSensorConfig p = new PressureSensorConfig();
+      p.setId(id);
+      sensors.add(p);
+    }
+    loc.setSensors(sensors);
+    SiteConfig cfg = new SiteConfig();
+    cfg.setLocations(List.of(loc));
+    return cfg;
   }
 
   /** Single pressure: output contains original plus average. */
   @Test
   public void singlePressure_emittedAsAverage() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.subscribe(received::add);
 
     Pressure p = new Pressure(1000L, "P1", new BigDecimal("101325"));
@@ -56,7 +77,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void multiplePressures_averageEmitted() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.subscribe(received::add);
 
     Pressure p1 = new Pressure(2000L, "P1", new BigDecimal("100000"));
@@ -82,7 +103,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void noPressure_nothingPublished() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.subscribe(received::add);
 
     Temperature t = new Temperature(1000L, "T1", new BigDecimal("20"));
@@ -97,7 +118,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void pressureAndNonPressure_originalsPlusAverageInOutput() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.subscribe(received::add);
 
     Pressure p = new Pressure(1000L, "P1", new BigDecimal("101325"));
@@ -123,7 +144,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void timestampPreserved() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.subscribe(received::add);
 
     long ts = 12345L;
@@ -140,7 +161,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void listSensors_delegatesToSource() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     Assertions.assertNotNull(stream.listSensors());
     Assertions.assertTrue(stream.listSensors().isEmpty());
     stream.stop();
@@ -150,7 +171,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void stop_idempotent_secondCallDoesNotThrow() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.stop();
     Assertions.assertDoesNotThrow(stream::stop);
   }
@@ -159,7 +180,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void allPressureValuesNull_nothingPublished() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.subscribe(received::add);
 
     Pressure pNull = new Pressure(1000L, "P1", null);
@@ -173,7 +194,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void somePressureValuesNull_averageUsesOnlyNonNull() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.subscribe(received::add);
 
     Pressure p1 = new Pressure(1000L, "P1", null);
@@ -198,7 +219,7 @@ public class AveragePressureMeasurementVectorStreamTest {
   @Test
   public void severeError_passesThroughWithoutAverage() {
     AveragePressureMeasurementVectorStream stream =
-        new AveragePressureMeasurementVectorStream(source);
+        new AveragePressureMeasurementVectorStream(source, siteConfigWithP1P2);
     stream.subscribe(received::add);
 
     Pressure p = new Pressure(1000L, "P1", new BigDecimal("101325"));

@@ -10,18 +10,21 @@ import java.util.Map;
 
 /**
  * A simple stacked measurement vector stream that wraps a source stream and applies believability
- * filtering based on the site's sensor configuration.
+ * filtering and average pressure calculation based on the site's sensor configuration.
  *
- * <p>The chain is currently:
+ * <p>Each step uses {@link MeasurementFilter#filter} when it needs site-config sensors for
+ * computation; the input vector is left intact and results/errors are added. Chain:
  *
  * <ol>
- *   <li>{@link BelievabilityFilteredMeasurementVectorStream}
+ *   <li>{@link BelievabilityFilteredMeasurementVectorStream} – adds errors for out-of-range
+ *   <li>{@link AveragePressureMeasurementVectorStream} – averages site-config pressures, adds
+ *       result
  * </ol>
  *
  * <p>Subscribers register via {@link #subscribe(MeasurementVectorHandler)} and receive vectors
- * emitted by the believability-filtered stage. {@link #listSensors()} returns the site's sensor
- * list in order. {@link #stop()} unsubscribes from the tail and stops the wrapped stream so that
- * all subscriptions are cleared.
+ * emitted by the final stage. {@link #listSensors()} returns the site's sensor list in order.
+ * {@link #stop()} unsubscribes from the tail and stops the wrapped streams so that all
+ * subscriptions are cleared.
  */
 public final class StackedMeasurementVectorStream extends MeasurementVectorStream {
 
@@ -29,10 +32,11 @@ public final class StackedMeasurementVectorStream extends MeasurementVectorStrea
   private MeasurementVectorStream.Subscription tailSubscription;
 
   private final BelievabilityFilteredMeasurementVectorStream believability;
+  private final AveragePressureMeasurementVectorStream averagePressure;
 
   /**
-   * Builds the chain and returns a stream that delegates to the believability-filtered stream and
-   * exposes the site's sensor list.
+   * Builds the chain and returns a stream that delegates to the final stage and exposes the site's
+   * sensor list.
    *
    * @param siteConfig site configuration (sensors); must not be null
    * @param source the measurement vector stream to feed the chain
@@ -42,8 +46,9 @@ public final class StackedMeasurementVectorStream extends MeasurementVectorStrea
 
     Map<String, SensorConfig> sensorMapById = buildSensorMapById(siteConfig);
 
-    this.believability = new BelievabilityFilteredMeasurementVectorStream(source, sensorMapById);
-    this.tailSubscription = believability.subscribe(this::publish);
+    this.believability = new BelievabilityFilteredMeasurementVectorStream(source, siteConfig);
+    this.averagePressure = new AveragePressureMeasurementVectorStream(believability, siteConfig);
+    this.tailSubscription = averagePressure.subscribe(this::publish);
   }
 
   private static Map<String, SensorConfig> buildSensorMapById(SiteConfig siteConfig) {
@@ -61,14 +66,15 @@ public final class StackedMeasurementVectorStream extends MeasurementVectorStrea
   }
 
   /**
-   * Stops the chain: unsubscribes from the tail, then stops the believability stream so that no
-   * events are delivered and all subscriptions are cleared.
+   * Stops the chain: unsubscribes from the tail, then stops each stage so that no events are
+   * delivered and all subscriptions are cleared.
    */
   public void stop() {
     if (tailSubscription != null) {
       tailSubscription.unsubscribe();
       tailSubscription = null;
     }
+    averagePressure.stop();
     believability.stop();
     clearSubscribers();
   }

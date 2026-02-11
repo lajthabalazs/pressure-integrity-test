@@ -230,32 +230,11 @@ public class LoadSimulationDialog extends JDialog {
     }
   }
 
-  /**
-   * Maps site config sensor ID to the expected ITV measurement key (p1, p2, T1..T61, fi1..fi10).
-   */
-  private static String siteSensorIdToItvKey(SensorConfig sensor) {
-    String type = sensor.getType();
-    String id = sensor.getId();
-    if (id == null) return "";
-    if ("pressure".equals(type)) return id.toLowerCase();
-    if ("humidity".equals(type)) {
-      String u = id.toUpperCase();
-      if (u.startsWith("RH")) {
-        try {
-          return "fi" + id.substring(2).trim();
-        } catch (Exception ignored) {
-        }
-      }
-      return "fi" + id;
-    }
-    return id; // temperature or other: T1, T24, etc.
-  }
-
   private boolean checkSensorsMatch(SiteConfig siteConfig, MeasurementVector firstVector) {
     Set<String> expected =
         siteConfig.getSensors().stream()
-            .map(LoadSimulationDialog::siteSensorIdToItvKey)
-            .filter(s -> !s.isEmpty())
+            .map(SensorConfig::getId)
+            .filter(id -> id != null && !id.isEmpty())
             .collect(Collectors.toSet());
     Set<String> actual = new HashSet<>(firstVector.getMeasurementsMap().keySet());
     actual.remove("p"); // main pressure is computed, not a sensor

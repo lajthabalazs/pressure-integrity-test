@@ -1,7 +1,12 @@
 package ca.lajthabalazs.pressure_integity_test.measurement.processing;
 
 import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.config.HumiditySensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.LocationConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.PressureSensorConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SensorConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.TemperatureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.GasConstant;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
@@ -46,10 +51,33 @@ public class AverageGasConstantMeasurementVectorStreamTest {
     return loc;
   }
 
+  private SiteConfig siteConfigForGasConstantTest() {
+    List<SensorConfig> sensors = new ArrayList<>();
+    PressureSensorConfig p1 = new PressureSensorConfig();
+    p1.setId("P1");
+    sensors.add(p1);
+    for (String id : locationsBySensorId.keySet()) {
+      TemperatureSensorConfig t = new TemperatureSensorConfig();
+      t.setId(id);
+      sensors.add(t);
+    }
+    for (String id : humidityToTemperature.keySet()) {
+      HumiditySensorConfig h = new HumiditySensorConfig();
+      h.setId(id);
+      sensors.add(h);
+    }
+    LocationConfig loc = new LocationConfig();
+    loc.setId("L1");
+    loc.setSensors(sensors);
+    SiteConfig cfg = new SiteConfig();
+    cfg.setLocations(List.of(loc));
+    return cfg;
+  }
+
   private AverageGasConstantMeasurementVectorStream newStream(
       MeasurementVectorStream wrappedSource) {
     return new AverageGasConstantMeasurementVectorStream(
-        wrappedSource, locationsBySensorId, humidityToTemperature);
+        wrappedSource, locationsBySensorId, humidityToTemperature, siteConfigForGasConstantTest());
   }
 
   /**
@@ -66,18 +94,19 @@ public class AverageGasConstantMeasurementVectorStreamTest {
    */
   @Test
   public void singlePair_emitsAverageGasConstant() {
-    // Base stream -> average pressure -> average temperature -> average gas constant
-    AveragePressureMeasurementVectorStream avgPressure =
-        new AveragePressureMeasurementVectorStream(source);
-    AverageTemperatureMeasurementVectorStream avgTemp =
-        new AverageTemperatureMeasurementVectorStream(avgPressure, locationsBySensorId);
-    AverageGasConstantMeasurementVectorStream avgR = newStream(avgTemp);
-
-    avgR.subscribe(received::add);
-
     // Configuration: temperature sensor T1 at location L1 with volume factor 1.0
     locationsBySensorId.put("T1", location("L1", "1.0"));
     humidityToTemperature.put("H1", "T1");
+
+    // Base stream -> average pressure -> average temperature -> average gas constant
+    SiteConfig siteConfig = siteConfigForGasConstantTest();
+    AveragePressureMeasurementVectorStream avgPressure =
+        new AveragePressureMeasurementVectorStream(source, siteConfig);
+    AverageTemperatureMeasurementVectorStream avgTemp =
+        new AverageTemperatureMeasurementVectorStream(avgPressure, locationsBySensorId, siteConfig);
+    AverageGasConstantMeasurementVectorStream avgR = newStream(avgTemp);
+
+    avgR.subscribe(received::add);
 
     // One cycle: pressure, temperature (20 °C), humidity (50 %)
     Pressure p = new Pressure(1000L, "P1", new BigDecimal("101325"));
@@ -210,7 +239,8 @@ public class AverageGasConstantMeasurementVectorStreamTest {
   @Test
   public void constructor_nullMapsHandledAsEmpty() {
     AverageGasConstantMeasurementVectorStream stream =
-        new AverageGasConstantMeasurementVectorStream(source, null, null);
+        new AverageGasConstantMeasurementVectorStream(
+            source, null, null, siteConfigForGasConstantTest());
     Assertions.assertNotNull(stream.listSensors());
     Assertions.assertTrue(stream.listSensors().isEmpty());
     stream.stop();
