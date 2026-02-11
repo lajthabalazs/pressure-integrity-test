@@ -157,6 +157,18 @@ tasks.jacocoTestCoverageVerification {
                 minimum = BigDecimal("1.0")
             }
         }
+        // Explicit coverage requirement for LeakageMeasurementVectorStream
+        rule {
+            element = "CLASS"
+            includes = listOf(
+                "ca.lajthabalazs.pressure_integrity_test.measurement.processing.LeakageMeasurementVectorStream"
+            )
+            limit {
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = BigDecimal("1.0")
+            }
+        }
     }
 }
 
