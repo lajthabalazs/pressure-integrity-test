@@ -1,9 +1,11 @@
 package ca.lajthabalazs.pressure_integity_test.measurement.processing;
 
 import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.GasConstant;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Leakage;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementError;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
@@ -330,6 +332,41 @@ public class LeakageMeasurementVectorStreamTest {
             .findFirst()
             .orElseThrow();
     Assertions.assertEquals(0, new BigDecimal("-1").compareTo(leakage.getValueInDefaultUnit()));
+    stream.stop();
+  }
+
+  /** Vector with severe error is passed through without computing leakage. */
+  @Test
+  public void severeError_passesThroughWithoutLeakage() {
+    LeakageMeasurementVectorStream stream = new LeakageMeasurementVectorStream(source);
+    stream.subscribe(received::add);
+
+    List<Measurement> m = new ArrayList<>();
+    m.add(
+        new Pressure(
+            1000L,
+            AveragePressureMeasurementVectorStream.AVG_PRESSURE_SOURCE_ID,
+            new BigDecimal("101325")));
+    m.add(
+        new Temperature(
+            1000L,
+            AverageTemperatureMeasurementVectorStream.AVG_TEMPERATURE_SOURCE_ID,
+            new BigDecimal("20")));
+    m.add(
+        new GasConstant(
+            1000L,
+            AverageGasConstantMeasurementVectorStream.AVG_R_SOURCE_ID,
+            new BigDecimal("287")));
+    MeasurementError severe = new MeasurementError("P1", ErrorSeverity.SEVERE, "Test severe");
+    MeasurementVector input = new MeasurementVector(1000L, m, List.of(severe));
+
+    source.publishToSubscribers(input);
+
+    Assertions.assertEquals(1, received.size());
+    MeasurementVector out = received.getFirst();
+    Assertions.assertSame(input, out);
+    Assertions.assertEquals(3, out.getMeasurements().size());
+    Assertions.assertEquals(List.of(severe), out.getErrors());
     stream.stop();
   }
 }

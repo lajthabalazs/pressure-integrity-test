@@ -105,6 +105,32 @@ public class MeasurementVectorPlaybackStreamTest {
   }
 
   @Test
+  public void startPlayback_preservesErrorsWhenAdjustingTimestamps() throws Exception {
+    playbackStream = new MeasurementVectorPlaybackStream();
+    List<MeasurementVector> received = new ArrayList<>();
+
+    playbackStream.subscribe(received::add);
+
+    Humidity h = new Humidity(1000L, "H1", new BigDecimal("50"));
+    var error =
+        new ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementError(
+            "H1",
+            ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity.SEVERE,
+            "Test error");
+    MeasurementVector vector = new MeasurementVector(1000L, List.of(h), List.of(error));
+
+    long startTime = System.currentTimeMillis();
+    playbackStream.startPlayback(List.of(vector), startTime);
+
+    Thread.sleep(100);
+
+    Assertions.assertEquals(1, received.size());
+    MeasurementVector out = received.getFirst();
+    Assertions.assertEquals(vector.getErrors(), out.getErrors());
+    Assertions.assertTrue(out.hasSevereError());
+  }
+
+  @Test
   public void startPlayback_preservesTimeDeltas() throws Exception {
     disableGarbageCollection();
     try {

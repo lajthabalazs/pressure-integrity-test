@@ -78,6 +78,11 @@ public class AverageTemperatureMeasurementVectorStream extends MeasurementVector
     this.sourceSubscription =
         source.subscribe(
             vector -> {
+              if (vector.hasSevereError()) {
+                // Propagate invalid vectors without further processing.
+                publish(vector);
+                return;
+              }
               Temperature avg = computeAverageTemperature(vector);
               if (avg == null) {
                 // No credible temperatures or no usable weights – skip publishing
@@ -85,7 +90,7 @@ public class AverageTemperatureMeasurementVectorStream extends MeasurementVector
               }
               List<Measurement> out = new ArrayList<>(vector.getMeasurements());
               out.add(avg);
-              publish(new MeasurementVector(vector.getTimeUtc(), out));
+              publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
             });
   }
 

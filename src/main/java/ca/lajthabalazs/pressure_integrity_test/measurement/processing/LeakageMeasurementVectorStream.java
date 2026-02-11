@@ -64,6 +64,11 @@ public class LeakageMeasurementVectorStream extends MeasurementVectorStream {
     this.sourceSubscription =
         source.subscribe(
             vector -> {
+              if (vector.hasSevereError()) {
+                // Do not attempt leakage calculation on invalid vectors – pass through.
+                publish(vector);
+                return;
+              }
               Double rho = densityFromVector(vector);
               if (rho == null) {
                 return;
@@ -84,7 +89,7 @@ public class LeakageMeasurementVectorStream extends MeasurementVectorStream {
               Leakage leakage = new Leakage(vector.getTimeUtc(), LEAKAGE_SOURCE_ID, leakageValue);
               List<Measurement> out = new ArrayList<>(vector.getMeasurements());
               out.add(leakage);
-              publish(new MeasurementVector(vector.getTimeUtc(), out));
+              publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
             });
   }
 

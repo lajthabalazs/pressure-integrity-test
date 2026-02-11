@@ -97,6 +97,11 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
     this.sourceSubscription =
         source.subscribe(
             vector -> {
+              if (vector.hasSevereError()) {
+                // Downstream of a severe error – pass vector through unchanged.
+                publish(vector);
+                return;
+              }
               GasConstant avg = computeAverageGasConstant(vector);
               if (avg == null) {
                 // No credible data – skip publishing
@@ -104,7 +109,7 @@ public class AverageGasConstantMeasurementVectorStream extends MeasurementVector
               }
               List<Measurement> out = new ArrayList<>(vector.getMeasurements());
               out.add(avg);
-              publish(new MeasurementVector(vector.getTimeUtc(), out));
+              publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
             });
   }
 

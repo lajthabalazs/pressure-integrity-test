@@ -46,13 +46,18 @@ public class BelievabilityFilteredMeasurementVectorStream extends MeasurementVec
     this.sourceSubscription =
         source.subscribe(
             vector -> {
+              if (vector.hasSevereError()) {
+                // Downstream streams should not attempt further processing – just pass through.
+                publish(vector);
+                return;
+              }
               List<Measurement> withinRange = new ArrayList<>();
               for (Measurement m : vector.getMeasurementsMap().values()) {
                 if (isWithinValidRange(m)) {
                   withinRange.add(m);
                 }
               }
-              publish(new MeasurementVector(vector.getTimeUtc(), withinRange));
+              publish(new MeasurementVector(vector.getTimeUtc(), withinRange, vector.getErrors()));
             });
   }
 

@@ -6,8 +6,10 @@ import ca.lajthabalazs.pressure_integrity_test.config.PressureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.SensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.TemperatureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.ValidRange;
+import ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementError;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
@@ -215,6 +217,31 @@ public class BelievabilityFilteredMeasurementVectorStreamTest {
         new BelievabilityFilteredMeasurementVectorStream(source, Map.of());
     Assertions.assertNotNull(filter.listSensors());
     Assertions.assertTrue(filter.listSensors().isEmpty());
+    filter.stop();
+  }
+
+  /** Vector with a severe error is passed through unchanged (no filtering). */
+  @Test
+  public void severeError_passesThroughUnchanged() {
+    TemperatureSensorConfig t24 =
+        temperatureSensorWithRange(new BigDecimal("0"), new BigDecimal("80"));
+    Map<String, SensorConfig> sensorMap =
+        sensorMap(t24, humiditySensorWithRange(BigDecimal.ZERO, new BigDecimal("100")));
+
+    BelievabilityFilteredMeasurementVectorStream filter =
+        new BelievabilityFilteredMeasurementVectorStream(source, sensorMap);
+    filter.subscribe(received::add);
+
+    Temperature t = new Temperature(1000L, "T24", new BigDecimal("200"));
+    MeasurementError severe = new MeasurementError("T24", ErrorSeverity.SEVERE, "Test severe");
+    MeasurementVector input = new MeasurementVector(1000L, List.of(t), List.of(severe));
+
+    source.publishToSubscribers(input);
+
+    Assertions.assertEquals(1, received.size());
+    MeasurementVector out = received.getFirst();
+    Assertions.assertSame(input, out);
+    Assertions.assertEquals(List.of(severe), out.getErrors());
     filter.stop();
   }
 

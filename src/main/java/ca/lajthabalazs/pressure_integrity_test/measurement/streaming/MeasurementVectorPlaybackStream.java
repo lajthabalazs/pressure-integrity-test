@@ -178,7 +178,7 @@ public class MeasurementVectorPlaybackStream extends MeasurementVectorStream {
                 for (Measurement m : vector.getMeasurementsMap().values()) {
                   adjusted.add(m.withNewTimestamp(m.getTimeUtc() + delta));
                 }
-                toPublish = new MeasurementVector(timestampBase, adjusted);
+                toPublish = new MeasurementVector(timestampBase, adjusted, vector.getErrors());
               }
               publish(toPublish);
               nextIndexToPublish.compareAndSet(index, index + 1);

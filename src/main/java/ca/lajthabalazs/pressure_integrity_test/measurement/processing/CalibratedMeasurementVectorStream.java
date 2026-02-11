@@ -44,6 +44,11 @@ public class CalibratedMeasurementVectorStream extends MeasurementVectorStream {
     this.sourceSubscription =
         source.subscribe(
             vector -> {
+              if (vector.hasSevereError()) {
+                // Do not attempt calibration on invalid vectors – pass through unchanged.
+                publish(vector);
+                return;
+              }
               Map<String, Measurement> raw = vector.getMeasurementsMap();
               List<Measurement> calibrated = new ArrayList<>(raw.size());
               for (Measurement m : raw.values()) {
@@ -60,7 +65,7 @@ public class CalibratedMeasurementVectorStream extends MeasurementVectorStream {
                   calibrated.add(m);
                 }
               }
-              publish(new MeasurementVector(vector.getTimeUtc(), calibrated));
+              publish(new MeasurementVector(vector.getTimeUtc(), calibrated, vector.getErrors()));
             });
   }
 

@@ -3,7 +3,9 @@ package ca.lajthabalazs.pressure_integity_test.measurement.processing;
 import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.config.CalibrationConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.LinearCalibration;
+import ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementError;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
@@ -191,6 +193,32 @@ public class CalibratedMeasurementVectorStreamTest {
     Assertions.assertNotNull(calibrated.listSensors());
     Assertions.assertTrue(
         calibrated.listSensors().isEmpty(), "TestMeasurementVectorStream returns empty list");
+    calibrated.stop();
+  }
+
+  /** Vector with severe error is passed through without applying calibration. */
+  @Test
+  public void severeError_passesThroughWithoutCalibration() {
+    CalibrationConfig config = new CalibrationConfig();
+    LinearCalibration cal = new LinearCalibration();
+    cal.setA(new BigDecimal("2"));
+    cal.setB(new BigDecimal("1"));
+    config.setSensorCalibration("T1", cal);
+
+    CalibratedMeasurementVectorStream calibrated =
+        new CalibratedMeasurementVectorStream(source, config);
+    calibrated.subscribe(received::add);
+
+    Temperature raw = new Temperature(1000L, "T1", new BigDecimal("10"));
+    MeasurementError severe = new MeasurementError("T1", ErrorSeverity.SEVERE, "Test severe");
+    MeasurementVector input = new MeasurementVector(1000L, List.of(raw), List.of(severe));
+
+    source.publishToSubscribers(input);
+
+    Assertions.assertEquals(1, received.size());
+    MeasurementVector out = received.getFirst();
+    Assertions.assertSame(input, out);
+    Assertions.assertEquals(List.of(severe), out.getErrors());
     calibrated.stop();
   }
 

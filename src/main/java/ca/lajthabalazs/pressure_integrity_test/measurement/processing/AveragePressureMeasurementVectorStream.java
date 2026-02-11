@@ -40,6 +40,11 @@ public class AveragePressureMeasurementVectorStream extends MeasurementVectorStr
     this.sourceSubscription =
         source.subscribe(
             vector -> {
+              if (vector.hasSevereError()) {
+                // Invalid vector – propagate without computing averages.
+                publish(vector);
+                return;
+              }
               List<Pressure> pressures = new ArrayList<>();
               for (Measurement m : vector.getMeasurementsMap().values()) {
                 if (m instanceof Pressure) {
@@ -65,7 +70,7 @@ public class AveragePressureMeasurementVectorStream extends MeasurementVectorStr
               Pressure avgPressure = new Pressure(vector.getTimeUtc(), AVG_PRESSURE_SOURCE_ID, avg);
               List<Measurement> out = new ArrayList<>(vector.getMeasurements());
               out.add(avgPressure);
-              publish(new MeasurementVector(vector.getTimeUtc(), out));
+              publish(new MeasurementVector(vector.getTimeUtc(), out, vector.getErrors()));
             });
   }
 

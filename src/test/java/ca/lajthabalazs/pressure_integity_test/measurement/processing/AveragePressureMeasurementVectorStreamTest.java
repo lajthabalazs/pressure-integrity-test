@@ -1,8 +1,10 @@
 package ca.lajthabalazs.pressure_integity_test.measurement.processing;
 
 import ca.lajthabalazs.pressure_integity_test.measurement.streaming.TestMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.ErrorSeverity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
+import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementError;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
@@ -189,6 +191,26 @@ public class AveragePressureMeasurementVectorStreamTest {
             .findFirst()
             .orElseThrow();
     Assertions.assertEquals(0, new BigDecimal("100000").compareTo(avg.getValueInDefaultUnit()));
+    stream.stop();
+  }
+
+  /** Vector with severe error is passed through, no average is added. */
+  @Test
+  public void severeError_passesThroughWithoutAverage() {
+    AveragePressureMeasurementVectorStream stream =
+        new AveragePressureMeasurementVectorStream(source);
+    stream.subscribe(received::add);
+
+    Pressure p = new Pressure(1000L, "P1", new BigDecimal("101325"));
+    MeasurementError severe = new MeasurementError("P1", ErrorSeverity.SEVERE, "Test severe");
+    MeasurementVector input = new MeasurementVector(1000L, List.of(p), List.of(severe));
+
+    source.publishToSubscribers(input);
+
+    Assertions.assertEquals(1, received.size());
+    MeasurementVector out = received.getFirst();
+    Assertions.assertSame(input, out);
+    Assertions.assertEquals(1, out.getMeasurements().size());
     stream.stop();
   }
 }
