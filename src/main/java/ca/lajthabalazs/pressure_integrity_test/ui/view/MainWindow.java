@@ -10,7 +10,7 @@ import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader.FailedToReadFil
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
 import ca.lajthabalazs.pressure_integrity_test.measurement.processing.AveragePressureMeasurementVectorStream;
-import ca.lajthabalazs.pressure_integrity_test.measurement.processing.StackedMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.processing.FullStackLeakageMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -72,7 +72,7 @@ public class MainWindow extends JFrame {
 
   private final AtomicReference<MeasurementVectorPlaybackStream> currentPlaybackStream =
       new AtomicReference<>(null);
-  private final AtomicReference<StackedMeasurementVectorStream> currentStackedStream =
+  private final AtomicReference<FullStackLeakageMeasurementVectorStream> currentFullStack =
       new AtomicReference<>(null);
   private final JPanel simulationControlPanel;
 
@@ -286,9 +286,9 @@ public class MainWindow extends JFrame {
     if (previousPlayback != null) {
       previousPlayback.stopPlayback();
     }
-    StackedMeasurementVectorStream previousStacked = currentStackedStream.getAndSet(null);
-    if (previousStacked != null) {
-      previousStacked.stop();
+    FullStackLeakageMeasurementVectorStream previousFullStack = currentFullStack.getAndSet(null);
+    if (previousFullStack != null) {
+      previousFullStack.stop();
     }
     // Stop any existing blink timer
     if (resumeBlinkTimer != null) {
@@ -328,12 +328,12 @@ public class MainWindow extends JFrame {
     MeasurementVectorPlaybackStream playbackStream = new MeasurementVectorPlaybackStream();
     playbackStream.setSpeed(30.0);
     currentPlaybackStream.set(playbackStream);
-    StackedMeasurementVectorStream stackedStream =
-        new StackedMeasurementVectorStream(siteConfig, playbackStream);
-    currentStackedStream.set(stackedStream);
+    FullStackLeakageMeasurementVectorStream fullStack =
+        new FullStackLeakageMeasurementVectorStream(siteConfig, null, playbackStream);
+    currentFullStack.set(fullStack);
     dashboardPanel.clear();
-    dashboardPanel.subscribe(stackedStream);
-    stackedStream.subscribe(
+    dashboardPanel.subscribe(fullStack);
+    fullStack.subscribe(
         vector -> {
           SwingUtilities.invokeLater(
               () -> {
