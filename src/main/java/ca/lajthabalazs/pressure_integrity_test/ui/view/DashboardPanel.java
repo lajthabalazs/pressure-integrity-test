@@ -1,9 +1,14 @@
 package ca.lajthabalazs.pressure_integrity_test.ui.view;
 
 import ca.lajthabalazs.pressure_integrity_test.measurement.Humidity;
+import ca.lajthabalazs.pressure_integrity_test.measurement.Leakage;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Pressure;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Temperature;
+import ca.lajthabalazs.pressure_integrity_test.measurement.processing.AverageGasConstantMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.processing.AveragePressureMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.processing.AverageTemperatureMeasurementVectorStream;
+import ca.lajthabalazs.pressure_integrity_test.measurement.processing.LeakageMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorStream;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -41,28 +46,29 @@ import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYDataset;
 
 /**
- * Dashboard panel that shows the first pressure, temperature, and humidity values and charts of all
- * measurements. Shown when a measurement vector stream is active; updates on each new vector.
+ * Dashboard panel that shows average pressure, average temperature, R, and leakage in the header,
+ * and charts for pressure, temperature, humidity, and leakage. Shown when a measurement vector
+ * stream is active; updates on each new vector.
  */
 public class DashboardPanel extends JPanel {
 
   private static final ZoneId DISPLAY_ZONE = ZoneId.of("Europe/Budapest");
   private static final String NO_VALUE = "—";
 
-  private final JLabel firstPressureLabel;
-  private final JLabel firstTemperatureLabel;
-  private final JLabel firstHumidityLabel;
-  private final JLabel firstHumidityAgainLabel;
+  private final JLabel avgPressureLabel;
+  private final JLabel avgTemperatureLabel;
+  private final JLabel rLabel;
+  private final JLabel leakageLabel;
 
   private final TimeSeriesCollection pressureDataset;
   private final TimeSeriesCollection temperatureDataset;
   private final TimeSeriesCollection humidityDataset;
-  private final TimeSeriesCollection humidityAgainDataset;
+  private final TimeSeriesCollection leakageDataset;
 
   private final Map<String, TimeSeries> pressureSeriesById = new HashMap<>();
   private final Map<String, TimeSeries> temperatureSeriesById = new HashMap<>();
   private final Map<String, TimeSeries> humiditySeriesById = new HashMap<>();
-  private final Map<String, TimeSeries> humidityAgainSeriesById = new HashMap<>();
+  private final Map<String, TimeSeries> leakageSeriesById = new HashMap<>();
 
   private MeasurementVectorStream.Subscription subscription;
 
@@ -73,23 +79,23 @@ public class DashboardPanel extends JPanel {
 
     JPanel valuesRow = new JPanel(new GridLayout(1, 4, 12, 0));
     valuesRow.setBackground(Color.WHITE);
-    firstPressureLabel = addValueCell(valuesRow, "Pressure");
-    firstTemperatureLabel = addValueCell(valuesRow, "Temperature");
-    firstHumidityLabel = addValueCell(valuesRow, "Humidity");
-    firstHumidityAgainLabel = addValueCell(valuesRow, "Humidity");
+    avgPressureLabel = addValueCell(valuesRow, "Average pressure");
+    avgTemperatureLabel = addValueCell(valuesRow, "Average temperature");
+    rLabel = addValueCell(valuesRow, "R");
+    leakageLabel = addValueCell(valuesRow, "Leakage");
     add(valuesRow, BorderLayout.NORTH);
 
     pressureDataset = new TimeSeriesCollection();
     temperatureDataset = new TimeSeriesCollection();
     humidityDataset = new TimeSeriesCollection();
-    humidityAgainDataset = new TimeSeriesCollection();
+    leakageDataset = new TimeSeriesCollection();
 
     JPanel chartsPanel = new JPanel(new GridLayout(2, 2, 8, 8));
     chartsPanel.setBackground(Color.WHITE);
     chartsPanel.add(createChartPanel("Pressure", pressureDataset, "Pa"));
     chartsPanel.add(createChartPanel("Temperature", temperatureDataset, "°C"));
     chartsPanel.add(createChartPanel("Humidity", humidityDataset, "%"));
-    chartsPanel.add(createChartPanel("Humidity", humidityAgainDataset, "%"));
+    chartsPanel.add(createChartPanel("Leakage", leakageDataset, "v/v%/d"));
     add(chartsPanel, BorderLayout.CENTER);
   }
 
@@ -311,17 +317,29 @@ public class DashboardPanel extends JPanel {
             vector ->
                 SwingUtilities.invokeLater(
                     () -> {
-                      Measurement firstPressure = null;
-                      Measurement firstTemperature = null;
-                      Measurement firstHumidity = null;
+                      Measurement avgPressure = null;
+                      Measurement avgTemperature = null;
+                      Measurement avgR = null;
+                      Measurement leakage = null;
                       for (Measurement m : vector.getMeasurements()) {
-                        if (firstPressure == null && m instanceof Pressure) firstPressure = m;
-                        if (firstTemperature == null && m instanceof Temperature)
-                          firstTemperature = m;
-                        if (firstHumidity == null && m instanceof Humidity) firstHumidity = m;
-                        if (firstPressure != null
-                            && firstTemperature != null
-                            && firstHumidity != null) {
+                        if (AveragePressureMeasurementVectorStream.AVG_PRESSURE_SOURCE_ID.equals(
+                            m.getSourceId())) {
+                          avgPressure = m;
+                        } else if (AverageTemperatureMeasurementVectorStream
+                            .AVG_TEMPERATURE_SOURCE_ID
+                            .equals(m.getSourceId())) {
+                          avgTemperature = m;
+                        } else if (AverageGasConstantMeasurementVectorStream.AVG_R_SOURCE_ID.equals(
+                            m.getSourceId())) {
+                          avgR = m;
+                        } else if (LeakageMeasurementVectorStream.LEAKAGE_SOURCE_ID.equals(
+                            m.getSourceId())) {
+                          leakage = m;
+                        }
+                        if (avgPressure != null
+                            && avgTemperature != null
+                            && avgR != null
+                            && leakage != null) {
                           break;
                         }
                       }
@@ -363,22 +381,23 @@ public class DashboardPanel extends JPanel {
                                     return s;
                                   })
                               .addOrUpdate(period, value);
-                          humidityAgainSeriesById
+                        } else if (m instanceof Leakage) {
+                          leakageSeriesById
                               .computeIfAbsent(
                                   id,
                                   k -> {
                                     TimeSeries s = new TimeSeries(id);
-                                    humidityAgainDataset.addSeries(s);
+                                    leakageDataset.addSeries(s);
                                     return s;
                                   })
                               .addOrUpdate(period, value);
                         }
                       }
 
-                      updateLabel(firstPressureLabel, firstPressure);
-                      updateLabel(firstTemperatureLabel, firstTemperature);
-                      updateLabel(firstHumidityLabel, firstHumidity);
-                      updateLabel(firstHumidityAgainLabel, firstHumidity);
+                      updateLabel(avgPressureLabel, avgPressure);
+                      updateLabel(avgTemperatureLabel, avgTemperature);
+                      updateLabel(rLabel, avgR);
+                      updateLabel(leakageLabel, leakage);
                     }));
   }
 
@@ -395,17 +414,17 @@ public class DashboardPanel extends JPanel {
       subscription.unsubscribe();
       subscription = null;
     }
-    firstPressureLabel.setText(NO_VALUE);
-    firstTemperatureLabel.setText(NO_VALUE);
-    firstHumidityLabel.setText(NO_VALUE);
-    firstHumidityAgainLabel.setText(NO_VALUE);
+    avgPressureLabel.setText(NO_VALUE);
+    avgTemperatureLabel.setText(NO_VALUE);
+    rLabel.setText(NO_VALUE);
+    leakageLabel.setText(NO_VALUE);
     pressureSeriesById.clear();
     temperatureSeriesById.clear();
     humiditySeriesById.clear();
-    humidityAgainSeriesById.clear();
+    leakageSeriesById.clear();
     pressureDataset.removeAllSeries();
     temperatureDataset.removeAllSeries();
     humidityDataset.removeAllSeries();
-    humidityAgainDataset.removeAllSeries();
+    leakageDataset.removeAllSeries();
   }
 }
