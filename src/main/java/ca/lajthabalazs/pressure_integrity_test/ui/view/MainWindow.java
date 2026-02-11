@@ -9,6 +9,7 @@ import ca.lajthabalazs.pressure_integrity_test.io.ItvFileReader;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader.FailedToReadFileException;
 import ca.lajthabalazs.pressure_integrity_test.measurement.Measurement;
 import ca.lajthabalazs.pressure_integrity_test.measurement.MeasurementVector;
+import ca.lajthabalazs.pressure_integrity_test.measurement.processing.StackedMeasurementVectorStream;
 import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorPlaybackStream;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -67,6 +68,8 @@ public class MainWindow extends JFrame {
   private final AtomicReference<List<SensorConfig>> dataSensorOrder = new AtomicReference<>(null);
 
   private final AtomicReference<MeasurementVectorPlaybackStream> currentPlaybackStream =
+      new AtomicReference<>(null);
+  private final AtomicReference<StackedMeasurementVectorStream> currentStackedStream =
       new AtomicReference<>(null);
   private final JPanel simulationControlPanel;
 
@@ -266,9 +269,13 @@ public class MainWindow extends JFrame {
   }
 
   private void startSimulationStream(File itvFile, SiteConfig siteConfig) {
-    MeasurementVectorPlaybackStream previous = currentPlaybackStream.getAndSet(null);
-    if (previous != null) {
-      previous.stopPlayback();
+    MeasurementVectorPlaybackStream previousPlayback = currentPlaybackStream.getAndSet(null);
+    if (previousPlayback != null) {
+      previousPlayback.stopPlayback();
+    }
+    StackedMeasurementVectorStream previousStacked = currentStackedStream.getAndSet(null);
+    if (previousStacked != null) {
+      previousStacked.stop();
     }
     // Stop any existing blink timer
     if (resumeBlinkTimer != null) {
@@ -301,9 +308,12 @@ public class MainWindow extends JFrame {
     MeasurementVectorPlaybackStream playbackStream = new MeasurementVectorPlaybackStream();
     playbackStream.setSpeed(30.0);
     currentPlaybackStream.set(playbackStream);
+    StackedMeasurementVectorStream stackedStream =
+        new StackedMeasurementVectorStream(siteConfig, playbackStream);
+    currentStackedStream.set(stackedStream);
     dashboardPanel.clear();
-    dashboardPanel.subscribe(playbackStream);
-    playbackStream.subscribe(
+    dashboardPanel.subscribe(stackedStream);
+    stackedStream.subscribe(
         vector -> {
           SwingUtilities.invokeLater(
               () -> {

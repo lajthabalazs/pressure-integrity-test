@@ -3,6 +3,7 @@ package ca.lajthabalazs.pressure_integrity_test.config;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader;
 import ca.lajthabalazs.pressure_integrity_test.io.TextFileReader.FailedToReadFileException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -17,7 +18,7 @@ public class SiteConfigReader {
   private final ObjectMapper objectMapper;
 
   public SiteConfigReader(TextFileReader fileReader) {
-    this(fileReader, new ObjectMapper());
+    this(fileReader, createDefaultObjectMapper());
   }
 
   /**
@@ -29,6 +30,12 @@ public class SiteConfigReader {
   public SiteConfigReader(TextFileReader fileReader, ObjectMapper objectMapper) {
     this.fileReader = fileReader;
     this.objectMapper = objectMapper;
+  }
+
+  private static ObjectMapper createDefaultObjectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    return mapper;
   }
 
   /**
