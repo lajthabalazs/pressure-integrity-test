@@ -5,7 +5,9 @@ import ca.lajthabalazs.pressure_integrity_test.config.HumiditySensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.LocationConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.SensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.config.SiteConfig;
+import ca.lajthabalazs.pressure_integrity_test.config.TemperatureSensorConfig;
 import ca.lajthabalazs.pressure_integrity_test.measurement.streaming.MeasurementVectorStream;
+import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -101,11 +103,31 @@ public final class FullStackLeakageMeasurementVectorStream extends MeasurementVe
     return map;
   }
 
-  private static Map<String, String> buildHumidityToTemperatureSensorId(SiteConfig siteConfig) {
+  /**
+   * Builds a humidity→temperature pairing map based on sensor locations.
+   *
+   * <p>For each location, all humidity sensors are paired with the first temperature sensor found
+   * in the same location. If a location has no temperature sensors, its humidity sensors are not
+   * paired.
+   */
+  @VisibleForTesting
+  static Map<String, String> buildHumidityToTemperatureSensorId(SiteConfig siteConfig) {
     Map<String, String> map = new LinkedHashMap<>();
-    for (SensorConfig s : siteConfig.getSensors()) {
-      if (s instanceof HumiditySensorConfig h) {
-        map.put(h.getId(), h.getPairedTemperatureSensor());
+    for (LocationConfig loc : siteConfig.getLocations()) {
+      String primaryTempId = null;
+      List<String> humidityIds = new ArrayList<>();
+      for (SensorConfig s : loc.getSensors()) {
+        if (s instanceof TemperatureSensorConfig && primaryTempId == null) {
+          primaryTempId = s.getId();
+        } else if (s instanceof HumiditySensorConfig) {
+          humidityIds.add(s.getId());
+        }
+      }
+      if (primaryTempId == null) {
+        continue;
+      }
+      for (String hId : humidityIds) {
+        map.put(hId, primaryTempId);
       }
     }
     return map;
@@ -122,10 +144,8 @@ public final class FullStackLeakageMeasurementVectorStream extends MeasurementVe
    * that no events are delivered and all subscriptions are cleared.
    */
   public void stop() {
-    if (tailSubscription != null) {
-      tailSubscription.unsubscribe();
-      tailSubscription = null;
-    }
+    tailSubscription.unsubscribe();
+    tailSubscription = null;
     leakage.stop();
     averageGasConstant.stop();
     averageTemperature.stop();

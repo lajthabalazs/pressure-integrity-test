@@ -82,7 +82,6 @@ public class FullStackLeakageMeasurementVectorStreamTest {
 
     HumiditySensorConfig h = new HumiditySensorConfig();
     h.setId("H1");
-    h.setPairedTemperatureSensor("T1");
 
     List<SensorConfig> sensors = new ArrayList<>();
     sensors.add(h);

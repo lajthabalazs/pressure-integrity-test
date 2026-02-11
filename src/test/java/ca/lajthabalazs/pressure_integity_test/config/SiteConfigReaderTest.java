@@ -74,7 +74,6 @@ public class SiteConfigReaderTest {
     Assertions.assertEquals("RH4", rh4.getId());
     Assertions.assertEquals("A301", rh4.getLocationId());
     Assertions.assertEquals("humidity", rh4.getType());
-    Assertions.assertEquals("T24", rh4.getPairedTemperatureSensor());
     Assertions.assertEquals(0, BigDecimal.ZERO.compareTo(rh4.getValidRange().getMin()));
     Assertions.assertEquals(0, new BigDecimal("100").compareTo(rh4.getValidRange().getMax()));
   }

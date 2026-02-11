@@ -105,16 +105,12 @@
     },
     "HumiditySensorConfig": {
       "type": "object",
-      "description": "Humidity sensor configuration (paired with a temperature sensor).",
+      "description": "Humidity sensor configuration.",
       "required": [ "id", "type" ],
       "properties": {
         "id": { "type": "string" },
         "type": { "const": "humidity" },
         "units": { "type": "string" },
-        "pairedTemperatureSensor": {
-          "type": "string",
-          "description": "Id of the temperature sensor this humidity sensor is paired with."
-        },
         "validRange": { "$ref": "#/$defs/ValidRange" },
         "sigma": { "type": "number" },
         "description": { "type": "string" }

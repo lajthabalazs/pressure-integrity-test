@@ -15,9 +15,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.io.File;
 import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -157,38 +155,20 @@ class SiteSelectionStepPanel extends JPanel {
           .append("</b> (volume factor ")
           .append(htmlEscape(formatDecimal(volumeFactor)))
           .append(")</p>");
-      Set<String> humidityShownUnderTemp = new HashSet<>();
       for (SensorConfig s : loc.getSensors()) {
-        if (s == null) continue;
-        if (s instanceof PressureSensorConfig) {
-          PressureSensorConfig p = (PressureSensorConfig) s;
+        if (s instanceof PressureSensorConfig p) {
           sb.append("<p style='margin:0 0 0 12px'>")
               .append(
                   htmlEscape(formatSensorLine(p.getId(), p.getDescription(), p.getSigma(), null)))
               .append("</p>");
-        } else if (s instanceof TemperatureSensorConfig) {
-          TemperatureSensorConfig t = (TemperatureSensorConfig) s;
+        } else if (s instanceof TemperatureSensorConfig t) {
           sb.append("<p style='margin:0 0 0 12px'>")
               .append(htmlEscape(formatTempLine(t, volumeFactor)))
               .append("</p>");
-          for (SensorConfig s2 : loc.getSensors()) {
-            if (s2 instanceof HumiditySensorConfig) {
-              HumiditySensorConfig h = (HumiditySensorConfig) s2;
-              if (t.getId() != null && t.getId().equals(h.getPairedTemperatureSensor())) {
-                sb.append("<p style='margin:0 0 0 24px'>Humidity: ")
-                    .append(htmlEscape(formatHumidityLine(h)))
-                    .append("</p>");
-                if (h.getId() != null) humidityShownUnderTemp.add(h.getId());
-              }
-            }
-          }
-        } else if (s instanceof HumiditySensorConfig) {
-          HumiditySensorConfig h = (HumiditySensorConfig) s;
-          if (h.getId() != null && !humidityShownUnderTemp.contains(h.getId())) {
-            sb.append("<p style='margin:0 0 0 12px'>Humidity: ")
-                .append(htmlEscape(formatHumidityLine(h)))
-                .append("</p>");
-          }
+        } else if (s instanceof HumiditySensorConfig h) {
+          sb.append("<p style='margin:0 0 0 12px'>Humidity: ")
+              .append(htmlEscape(formatHumidityLine(h)))
+              .append("</p>");
         }
       }
     }
