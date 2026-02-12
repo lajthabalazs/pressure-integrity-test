@@ -1,5 +1,5 @@
 # Deploy GitHub Pages so the site exists and points to Releases (no build required)
-name: Deploy Exe, and Pages
+name: Deploy Zip
 
 on:
   workflow_dispatch:
