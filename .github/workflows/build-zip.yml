@@ -1,0 +1,74 @@
+# Deploy GitHub Pages so the site exists and points to Releases (no build required)
+name: Deploy Exe, and Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (example: 1.2.3)"
+        required: true
+        type: string
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  release-zip:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for Gradle wrapper
+        shell: bash
+        run: chmod +x ./gradlew
+
+      - name: Build zip with Gradle
+        shell: pwsh
+        run: .\gradlew.bat packageZip
+
+      - name: Rename ZIP to stable name
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem build/dist/*.zip | Select-Object -First 1
+          if (-not $zip) { throw "No zip found in build/dist" }
+          Rename-Item $zip.FullName "pressure-integrity-test.zip"
+
+      - name: Create and push tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v${{ inputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fail if tag already exists remotely
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+            echo "Tag ${TAG} already exists."
+            exit 1
+          fi
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+      - name: Create GitHub Release & upload ZIP
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: build/dist/pressure-integrity-test.zip
