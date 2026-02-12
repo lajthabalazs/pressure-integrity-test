@@ -5,6 +5,9 @@ plugins {
     id("jacoco")
 }
 
+// Ensure build directory is set (Gradle 9 may not set it by default, causing "provider has no value" when resolving configs)
+layout.buildDirectory.set(layout.projectDirectory.dir("build"))
+
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
@@ -174,25 +177,29 @@ tasks.jacocoTestCoverageVerification {
 }
 
 // Task to create a Windows app-image (directory with .exe launcher + bundled JRE via jpackage)
+// Uses installDist output so all runtime JARs (including FlatLaf) are already bundled—avoids Gradle 9 provider issues
 tasks.register<Exec>("packageExe") {
-    dependsOn(tasks.jar)
+    dependsOn(tasks.named("installDist"))
 
     val appName = "pressure-integrity-test"
     // jpackage requires a numeric version, so strip any suffix like "-SNAPSHOT"
     val appVersion = project.version.toString().substringBefore("-")
     val jarFileName = "${appName}-${project.version}.jar"
 
-    val buildDirPath = layout.buildDirectory.get().asFile.path
-    // Clean existing app-image directory, since this jpackage version doesn't support --force
-    val imageDir = file("$buildDirPath/dist/$appName")
-    project.delete(imageDir)
+    val installLibDir = file("build/install/$appName/lib")
+    val distDir = file("build/dist")
+    val imageDir = distDir.resolve(appName)
+
+    doFirst {
+        project.delete(imageDir)
+    }
 
     commandLine(
         "jpackage",
         "--win-console",
         "--type", "app-image",
-        "--input", "$buildDirPath/libs",
-        "--dest", "$buildDirPath/dist",
+        "--input", installLibDir.absolutePath,
+        "--dest", distDir.absolutePath,
         "--name", appName,
         "--main-jar", jarFileName,
         "--main-class", application.mainClass.get(),
@@ -207,13 +214,12 @@ tasks.register<Zip>("packageZip") {
     val appName = "pressure-integrity-test"
     val appVersion = project.version.toString().substringBefore("-")
 
-    val buildDirPath = layout.buildDirectory.get().asFile.path
-    val imageDir = file("$buildDirPath/dist/$appName")
+    val imageDir = file("build/dist/$appName")
 
     from(imageDir)
     archiveBaseName.set(appName)
     archiveVersion.set(appVersion)
-    destinationDirectory.set(file("$buildDirPath/dist"))
+    destinationDirectory.set(file("build/dist"))
 }
 
 // Task to ensure check runs all validations (including formatting)
