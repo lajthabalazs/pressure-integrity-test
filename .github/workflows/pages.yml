@@ -1,0 +1,47 @@
+# Deploy GitHub Pages so the site exists and points to Releases (no build required)
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare GitHub Pages content
+        run: |
+          REPO="${{ github.repository }}"
+          REPO_URL="https://github.com/${REPO}"
+          RELEASE_LATEST_URL="${REPO_URL}/releases/latest"
+          mkdir -p _site
+          cat << EOF > _site/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Pressure Integrity Test</title>
+          </head>
+          <body>
+            <h1>Pressure Integrity Test</h1>
+            <p>A tool to monitor pressure integrity tests and extrapolate leakage.</p>
+            <p><a href="${RELEASE_LATEST_URL}">Download latest Windows zip</a> (from Releases)</p>
+            <p><a href="${REPO_URL}">Source code</a></p>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          force_orphan: true
