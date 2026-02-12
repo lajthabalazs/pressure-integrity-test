@@ -25,24 +25,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Generate site
+      - name: Copy site from resources
         run: |
           mkdir -p site
-          cat > site/index.html <<'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Pressure Integrity Test</title>
-          </head>
-          <body>
-            <h1>Pressure Integrity Test</h1>
-            <p>A tool to monitor pressure integrity tests and extrapolate leakage.</p>
-            <p><a href="https://github.com/lajthabalazs/pressure-integrity-test/releases/latest/download/pressure-integrity-test.zip">Download latest Windows zip</a> (from Releases)</p>
-          </body>
-          </html>
-          EOF
+          cp -r src/main/resources/pages/. site/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

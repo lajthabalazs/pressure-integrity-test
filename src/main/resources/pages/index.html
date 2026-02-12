@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pressure Integrity Test – Project overview</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-visited: #a371f7;
+      --border: #30363d;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 2rem 1.5rem;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      max-width: 52rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+    p { margin: 0 0 1rem; }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    a:visited { color: var(--accent-visited); }
+    ul {
+      margin: 0 0 1rem;
+      padding-left: 1.5rem;
+    }
+    li { margin-bottom: 0.35rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem;
+    }
+    .card p {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    .card a {
+      font-size: 0.9rem;
+      word-break: break-all;
+    }
+    .repo-link {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+    .repo-link:hover {
+      background: var(--border);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pressure Integrity Test</h1>
+  <p class="subtitle">Project overview and reference files</p>
+
+  <h2>What this project does</h2>
+  <p>
+    <strong>Pressure Integrity Test</strong> is a desktop tool that monitors <strong>pressure integrity tests</strong>
+    and <strong>extrapolates leakage</strong>. At the moment, it only support replaying past tests:
+    you load measurement data from ITV (Integrális Tömörségvizsgálat) files, configure the site (containment volume,
+    design pressure, sensor locations), optionally apply calibration, and the application computes averaged pressure,
+    temperature, gas constant (R), and leakage over time.
+  </p>
+
+  <h2>Files the application uses</h2>
+  <ul>
+    <li><strong>ITV files</strong> – Tab-separated measurement files (date, time, pressures, temperatures, humidity).
+      Timestamps are interpreted as Europe/Budapest.</li>
+    <li><strong>Site config (JSON)</strong> – Defines the site id, containment (e.g. net volume), design pressure and
+      leak limits, and locations with pressure, temperature, and humidity sensors. Validated by
+      <code>site-config.schema.json</code>.</li>
+    <li><strong>Calibration (JSON)</strong> – Optional mapping from sensor id to linear calibration (real = A × measured + B).</li>
+    <li><strong>Test config (JSON)</strong> – Test type and stages (e.g. for EITV), used when running a test.</li>
+  </ul>
+  <p>
+    By default the app uses <code>src/main/resources</code> as the root directory for config files; site configs
+    and calibration can also be chosen via the UI.
+  </p>
+
+  <h2>Reference files on GitHub</h2>
+  <p>Links point to the <code>main</code> branch. Schema and default config live under
+    <code>src/main/resources</code>; sample configs and a sample ITV live under <code>src/test/resources</code>.</p>
+
+  <div class="card">
+    <h3>Latest release of the software</h3>
+      <p>A zip file containing all resources needed to run the program. Extract the contents to an empty folder, and run the <strong>pressure-integrity-test.exe</strong> at your own risk.</p>
+      <a href="https://github.com/lajthabalazs/pressure-integrity-test/releases/latest/download/pressure-integrity-test.zip">Download latest Windows zip</a>
+  </div>
+
+  <div class="card">
+    <h3>Resources folder (main)</h3>
+    <p>Schema and default calibration in the repo.</p>
+    <a href="https://github.com/lajthabalazs/pressure-integrity-test/tree/main/src/main/resources" target="_blank" rel="noopener">https://github.com/lajthabalazs/pressure-integrity-test/tree/main/src/main/resources</a>
+  </div>
+
+  <div class="card">
+    <h3>Site config JSON Schema</h3>
+    <p>Schema for site configuration (containment, design pressure, locations, sensors).</p>
+    <a href="https://github.com/lajthabalazs/pressure-integrity-test/blob/main/src/main/resources/site-config.schema.json" target="_blank" rel="noopener">site-config.schema.json</a>
+  </div>
+
+  <div class="card">
+    <h3>Sample site config</h3>
+    <p>Example site configuration used in tests.</p>
+    <a href="https://github.com/lajthabalazs/pressure-integrity-test/blob/main/src/test/resources/site-config/site-config-sample.json" target="_blank" rel="noopener">site-config-sample.json</a>
+  </div>
+
+  <div class="card">
+    <h3>Default calibration</h3>
+    <p>Default calibration config in main resources.</p>
+    <a href="https://github.com/lajthabalazs/pressure-integrity-test/blob/main/src/main/resources/calibration.json" target="_blank" rel="noopener">calibration.json</a>
+  </div>
+
+  <div class="card">
+    <h3>Sample ITV file</h3>
+    <p>Example ITV measurement file (tab-separated, Central European encoding).</p>
+    <a href="https://github.com/lajthabalazs/pressure-integrity-test/blob/main/src/test/resources/itv/itv-sample.ITV" target="_blank" rel="noopener">itv-sample.ITV</a>
+  </div>
+
+  <a class="repo-link" href="https://github.com/lajthabalazs/pressure-integrity-test" target="_blank" rel="noopener">Repository – lajthabalazs/pressure-integrity-test</a>
+</body>
+</html>
