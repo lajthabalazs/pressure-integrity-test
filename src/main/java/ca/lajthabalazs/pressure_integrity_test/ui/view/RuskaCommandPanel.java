@@ -54,6 +54,7 @@ public class RuskaCommandPanel extends JPanel {
   private final AttributeSet sentStyle;
   private final AttributeSet receivedStyle;
   private volatile boolean readerRunning = true;
+  private volatile boolean disconnectNotified;
   private boolean dontShowPlainTextWarningThisSession;
 
   public RuskaCommandPanel(SerialPortHandle handle) {
@@ -245,6 +246,20 @@ public class RuskaCommandPanel extends JPanel {
     }
   }
 
+  private void notifyDisconnected() {
+    if (disconnectNotified) return;
+    disconnectNotified = true;
+    SwingUtilities.invokeLater(
+        () -> {
+          appendToLog(formatMessageForDisplay("[Device disconnected]"), receivedStyle);
+          JOptionPane.showMessageDialog(
+              this,
+              "The device has been disconnected.",
+              "Device disconnected",
+              JOptionPane.WARNING_MESSAGE);
+        });
+  }
+
   private void startReaderThread() {
     Thread t =
         new Thread(
@@ -256,7 +271,10 @@ public class RuskaCommandPanel extends JPanel {
                 try {
                   int n = in.read(buf);
                   if (n <= 0) {
-                    if (n < 0) break;
+                    if (n < 0) {
+                      if (readerRunning) notifyDisconnected();
+                      break;
+                    }
                     continue;
                   }
                   String chunk = new String(buf, 0, n, StandardCharsets.UTF_8);
@@ -272,8 +290,7 @@ public class RuskaCommandPanel extends JPanel {
                   }
                 } catch (IOException e) {
                   if (readerRunning) {
-                    appendToLog(
-                        formatMessageForDisplay("Read error: " + e.getMessage()), receivedStyle);
+                    notifyDisconnected();
                   }
                   break;
                 }
