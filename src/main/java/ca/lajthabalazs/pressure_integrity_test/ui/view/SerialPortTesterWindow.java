@@ -51,7 +51,7 @@ public class SerialPortTesterWindow extends JFrame {
     form.add(new JLabel("Port:"));
     portCombo = new JComboBox<>();
     portCombo.setPrototypeDisplayValue("COM99 (Descriptive Port Name)");
-    refreshPorts();
+    portCombo.addItemListener(e -> updatePortsState());
     form.add(portCombo);
 
     testRuskaButton = new JButton("Test Ruska");
@@ -72,7 +72,7 @@ public class SerialPortTesterWindow extends JFrame {
     content.add(messagePanel, BorderLayout.SOUTH);
 
     getContentPane().add(content);
-
+    refreshPorts();
     updatePortsState();
   }
 
@@ -112,10 +112,12 @@ public class SerialPortTesterWindow extends JFrame {
   }
 
   private void updatePortsState() {
-    boolean enabled = hasPorts();
+    boolean hasPorts = hasPorts();
+    boolean portSelected = getSelectedPortName() != null;
+    boolean enabled = hasPorts && portSelected;
     testRuskaButton.setEnabled(enabled);
     testAlmemoButton.setEnabled(enabled);
-    noPortsLabel.setVisible(!enabled);
+    noPortsLabel.setVisible(!hasPorts);
   }
 
   private String getSelectedPortName() {
