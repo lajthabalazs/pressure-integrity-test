@@ -23,10 +23,10 @@ public class SerialPortTestDeviceWindow extends JFrame {
   private static final int[] ALMEMO_STOP_BITS = {SerialPort.ONE_STOP_BIT};
   private static final int[] ALMEMO_PARITY = {SerialPort.NO_PARITY};
 
-  public SerialPortTestDeviceWindow(Frame parent, String preselectedPortName, boolean ruska) {
-    super(ruska ? "Ruska – Serial Port Test" : "Ahlborn Almemo – Serial Port Test");
+  public SerialPortTestDeviceWindow(Frame parent, String portName, boolean ruska) {
+    super((ruska ? "Ruska" : "Ahlborn Almemo") + " – " + portName);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-    setSize(500, 120);
+    setSize(820, 120);
     if (parent != null) {
       setLocationRelativeTo(parent);
     } else {
@@ -38,7 +38,7 @@ public class SerialPortTestDeviceWindow extends JFrame {
             ? new SerialPortPanel(RUSKA_BAUD, RUSKA_DATA_BITS, RUSKA_STOP_BITS, RUSKA_PARITY)
             : new SerialPortPanel(ALMEMO_BAUD, ALMEMO_DATA_BITS, ALMEMO_STOP_BITS, ALMEMO_PARITY);
     panel.refreshPorts();
-    panel.setSelectedPort(preselectedPortName);
+    panel.setSelectedPort(portName);
 
     getContentPane().add(panel);
   }

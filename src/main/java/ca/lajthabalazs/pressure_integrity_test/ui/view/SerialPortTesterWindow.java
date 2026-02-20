@@ -21,6 +21,7 @@ public class SerialPortTesterWindow extends JFrame {
 
   private static final String NO_PORTS_PLACEHOLDER = "(No ports found)";
   private static final String NO_PORTS_MESSAGE = "No serial ports detected";
+  private static final String DEMO_PORT = "DemoPort";
 
   private final Frame parent;
   private JComboBox<String> portCombo;
@@ -95,7 +96,9 @@ public class SerialPortTesterWindow extends JFrame {
     }
     if (portCombo.getItemCount() == 0) {
       portCombo.addItem(NO_PORTS_PLACEHOLDER);
-    } else if (selected != null) {
+    }
+    portCombo.addItem(DEMO_PORT);
+    if (selected != null) {
       for (int i = 0; i < portCombo.getItemCount(); i++) {
         if (selected.equals(portCombo.getItemAt(i))) {
           portCombo.setSelectedIndex(i);
@@ -109,7 +112,8 @@ public class SerialPortTesterWindow extends JFrame {
   }
 
   private boolean hasPorts() {
-    return portCombo.getItemCount() > 0 && !NO_PORTS_PLACEHOLDER.equals(portCombo.getItemAt(0));
+    return portCombo.getItemCount() > 1
+        || (portCombo.getItemCount() == 1 && !NO_PORTS_PLACEHOLDER.equals(portCombo.getItemAt(0)));
   }
 
   private void updatePortsState() {
@@ -123,6 +127,9 @@ public class SerialPortTesterWindow extends JFrame {
     String item = (String) portCombo.getSelectedItem();
     if (item == null || NO_PORTS_PLACEHOLDER.equals(item)) {
       return null;
+    }
+    if (DEMO_PORT.equals(item)) {
+      return DEMO_PORT;
     }
     int paren = item.indexOf(' ');
     return paren > 0 ? item.substring(0, paren) : item;

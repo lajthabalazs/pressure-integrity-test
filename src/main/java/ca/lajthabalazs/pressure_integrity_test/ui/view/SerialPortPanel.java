@@ -68,7 +68,6 @@ public class SerialPortPanel extends JPanel {
     if (supportedParity == null || supportedParity.length == 0) {
       throw new IllegalArgumentException("supportedParity must not be null or empty");
     }
-
     this.supportedBaudRates = supportedBaudRates.clone();
     this.dataBitsPerWord = dataBitsPerWord.clone();
     this.supportedNumberOfStopBits = supportedNumberOfStopBits.clone();
@@ -253,7 +252,9 @@ public class SerialPortPanel extends JPanel {
     }
     if (portCombo.getItemCount() == 0) {
       portCombo.addItem(NO_PORTS_PLACEHOLDER);
-    } else if (selected != null) {
+    }
+    portCombo.addItem(DEMO_PORT);
+    if (selected != null) {
       for (int i = 0; i < portCombo.getItemCount(); i++) {
         if (selected.equals(portCombo.getItemAt(i))) {
           portCombo.setSelectedIndex(i);
@@ -267,6 +268,9 @@ public class SerialPortPanel extends JPanel {
     String item = (String) portCombo.getSelectedItem();
     if (item == null || NO_PORTS_PLACEHOLDER.equals(item)) {
       return null;
+    }
+    if (DEMO_PORT.equals(item)) {
+      return DEMO_PORT;
     }
     int paren = item.indexOf(' ');
     return paren > 0 ? item.substring(0, paren) : item;
@@ -300,11 +304,18 @@ public class SerialPortPanel extends JPanel {
     return parityValues[parityCombo.getSelectedIndex()];
   }
 
+  private static final String DEMO_PORT = "DemoPort";
+
   private void onConnect() {
     String portName = getSelectedPortName();
     if (portName == null) {
       JOptionPane.showMessageDialog(
           this, "Please select a serial port.", "Connect", JOptionPane.WARNING_MESSAGE);
+      return;
+    }
+    if (DEMO_PORT.equals(portName)) {
+      JOptionPane.showMessageDialog(
+          this, "Demo mode – no connection made.", "Connect", JOptionPane.INFORMATION_MESSAGE);
       return;
     }
     if (openPort != null && openPort.isOpen()) {
