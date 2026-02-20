@@ -110,6 +110,12 @@ public class MainWindow extends JFrame {
     simulationMenu.add(loadOldFileItem);
     menuBar.add(simulationMenu);
 
+    JMenu toolsMenu = new JMenu("Tools");
+    JMenuItem serialPortTesterItem = new JMenuItem("Serial Port Tester");
+    serialPortTesterItem.addActionListener(e -> onOpenSerialPortTester());
+    toolsMenu.add(serialPortTesterItem);
+    menuBar.add(toolsMenu);
+
     setJMenuBar(menuBar);
 
     contentCardLayout = new CardLayout();
@@ -256,6 +262,11 @@ public class MainWindow extends JFrame {
   private void onStartNewTest() {
     NewTestWizardDialog dialog = new NewTestWizardDialog(this, rootDirectory);
     dialog.setVisible(true);
+  }
+
+  private void onOpenSerialPortTester() {
+    SerialPortTesterWindow window = new SerialPortTesterWindow(this);
+    window.setVisible(true);
   }
 
   private void onLoadOldFileForSimulation() {

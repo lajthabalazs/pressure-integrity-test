@@ -26,6 +26,7 @@ repositories {
 }
 
 dependencies {
+    implementation("com.fazecast:jSerialComm:2.11.4")
     implementation("com.formdev:flatlaf:3.5")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("org.jfree:jfreechart:1.5.4")
@@ -203,7 +204,8 @@ tasks.register<Exec>("packageExe") {
         "--name", appName,
         "--main-jar", jarFileName,
         "--main-class", application.mainClass.get(),
-        "--app-version", appVersion
+        "--app-version", appVersion,
+        "--java-options", "--enable-native-access=com.fazecast.jSerialComm"
     )
 }
 

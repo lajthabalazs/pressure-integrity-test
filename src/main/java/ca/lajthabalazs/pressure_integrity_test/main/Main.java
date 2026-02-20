@@ -19,7 +19,6 @@ public class Main {
 
   public static void main(String[] args) {
     FlatLightLaf.setup();
-
     EventQueue.invokeLater(
         () -> {
           MainWindow window = new MainWindow(ROOT_DIRECTORY);
