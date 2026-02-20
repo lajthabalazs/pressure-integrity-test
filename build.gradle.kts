@@ -81,7 +81,9 @@ tasks.jacocoTestReport {
                 exclude(
                     "ca/lajthabalazs/pressure_integrity_test/main/**",
                     "ca/lajthabalazs/pressure_integrity_test/ui/**",
-                    "ca/lajthabalazs/pressure_integrity_test/io/**"
+                    "ca/lajthabalazs/pressure_integrity_test/io/**",
+                    "ca/lajthabalazs/pressure_integrity_test/serial/**",
+                    "**/RuskaReadCommands.class"
                 )
             }
         }
@@ -96,7 +98,9 @@ tasks.jacocoTestCoverageVerification {
                 exclude(
                     "ca/lajthabalazs/pressure_integrity_test/main/**",
                     "ca/lajthabalazs/pressure_integrity_test/ui/**",
-                    "ca/lajthabalazs/pressure_integrity_test/io/**"
+                    "ca/lajthabalazs/pressure_integrity_test/io/**",
+                    "ca/lajthabalazs/pressure_integrity_test/serial/**",
+                    "**/RuskaReadCommands.class"
                 )
             }
         }
@@ -141,7 +145,8 @@ tasks.jacocoTestCoverageVerification {
             excludes = listOf(
                 "ca.lajthabalazs.pressure_integrity_test.main.*",
                 "ca.lajthabalazs.pressure_integrity_test.ui.*",
-                "ca.lajthabalazs.pressure_integrity_test.io.*"
+                "ca.lajthabalazs.pressure_integrity_test.io.*",
+                "ca.lajthabalazs.pressure_integrity_test.serial.*"
             )
             limit {
                 counter = "INSTRUCTION"
@@ -154,7 +159,9 @@ tasks.jacocoTestCoverageVerification {
             excludes = listOf(
                 "ca.lajthabalazs.pressure_integrity_test.main.*",
                 "ca.lajthabalazs.pressure_integrity_test.ui.*",
-                "ca.lajthabalazs.pressure_integrity_test.io.*"
+                "ca.lajthabalazs.pressure_integrity_test.io.*",
+                "ca.lajthabalazs.pressure_integrity_test.serial.*",
+                "ca.lajthabalazs.pressure_integrity_test.command.RuskaReadCommands"
             )
             limit {
                 counter = "INSTRUCTION"

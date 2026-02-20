@@ -1,7 +1,5 @@
 package ca.lajthabalazs.pressure_integrity_test.command;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,8 +18,7 @@ public class Command {
     this.id = id;
     this.name = name;
     this.description = description;
-    this.parameters =
-        parameters == null ? List.of() : Collections.unmodifiableList(new ArrayList<>(parameters));
+    this.parameters = List.copyOf(parameters);
   }
 
   public String getId() {
