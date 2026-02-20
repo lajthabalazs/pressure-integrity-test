@@ -78,13 +78,8 @@ public class SerialPortPanel extends JPanel {
     setLayout(new BorderLayout());
     setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
 
-    // Row 1: Port and Connect
     JPanel row1 = createHeader();
     add(row1, BorderLayout.CENTER);
-    JPanel row2 = new JPanel();
-    row2.setPreferredSize(new Dimension(10, 20));
-    row2.setBackground(Color.RED);
-    this.add(row2, BorderLayout.SOUTH);
   }
 
   private JPanel createHeader() {
@@ -226,6 +221,21 @@ public class SerialPortPanel extends JPanel {
       case SerialPort.TWO_STOP_BITS -> "2";
       default -> String.valueOf(stopBits);
     };
+  }
+
+  /**
+   * Sets the selected port by system port name (e.g. "COM3"). Call after {@link #refreshPorts()} if
+   * needed. No-op if the port is not in the list.
+   */
+  public void setSelectedPort(String portName) {
+    if (portName == null) return;
+    for (int i = 0; i < portCombo.getItemCount(); i++) {
+      String item = portCombo.getItemAt(i);
+      if (item != null && (item.equals(portName) || item.startsWith(portName + " "))) {
+        portCombo.setSelectedIndex(i);
+        return;
+      }
+    }
   }
 
   /** Refreshes the list of available serial ports in the dropdown. */

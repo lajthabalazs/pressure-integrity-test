@@ -2,51 +2,154 @@ package ca.lajthabalazs.pressure_integrity_test.ui.view;
 
 import com.fazecast.jSerialComm.SerialPort;
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.Frame;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
-import javax.swing.JTabbedPane;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
-/** Window for serial port testing with tabs for Ruska and Ahlborn Almemo devices. */
+/**
+ * First-step window for serial port testing: user selects port, then clicks "Test Ruska" or "Test
+ * Almemo" to open the appropriate device test window (parameters + Connect).
+ */
 public class SerialPortTesterWindow extends JFrame {
 
-  private static final String TAB_RUSKA = "Ruska";
-  private static final String TAB_AHLBORN_ALMEMO = "Ahlborn Almemo";
+  private static final String NO_PORTS_PLACEHOLDER = "(No ports found)";
+  private static final String NO_PORTS_MESSAGE = "No serial ports detected";
 
-  /**
-   * Ruska: baud 1200, 2400, 9600, 19200; parity none/even/odd; 7 or 8 data bits; 1 or 2 stop bits.
-   */
-  private static final int[] RUSKA_BAUD = {1200, 2400, 9600, 19200};
-
-  private static final int[] RUSKA_DATA_BITS = {7, 8};
-  private static final int[] RUSKA_STOP_BITS = {SerialPort.ONE_STOP_BIT, SerialPort.TWO_STOP_BITS};
-  private static final int[] RUSKA_PARITY = {
-    SerialPort.NO_PARITY, SerialPort.EVEN_PARITY, SerialPort.ODD_PARITY
-  };
-
-  /** ALMEMO: baud 300–230400; no parity; 8 data bits; 1 stop bit. */
-  private static final int[] ALMEMO_BAUD = {300, 600, 1200, 2400, 9600, 57600, 115200, 230400};
-
-  private static final int[] ALMEMO_DATA_BITS = {8};
-  private static final int[] ALMEMO_STOP_BITS = {SerialPort.ONE_STOP_BIT};
-  private static final int[] ALMEMO_PARITY = {SerialPort.NO_PARITY};
+  private final Frame parent;
+  private JComboBox<String> portCombo;
+  private JButton testRuskaButton;
+  private JButton testAlmemoButton;
+  private JLabel noPortsLabel;
 
   public SerialPortTesterWindow(Frame parent) {
-    setTitle("Serial Port Tester");
+    super("Serial Port Tester");
+    this.parent = parent;
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-    setSize(500, 500);
+    setSize(520, 180);
     if (parent != null) {
       setLocationRelativeTo(parent);
     } else {
       setLocationByPlatform(true);
     }
 
-    JTabbedPane tabbedPane = new JTabbedPane();
-    tabbedPane.addTab(
-        TAB_RUSKA, new SerialPortPanel(RUSKA_BAUD, RUSKA_DATA_BITS, RUSKA_STOP_BITS, RUSKA_PARITY));
-    tabbedPane.addTab(
-        TAB_AHLBORN_ALMEMO,
-        new SerialPortPanel(ALMEMO_BAUD, ALMEMO_DATA_BITS, ALMEMO_STOP_BITS, ALMEMO_PARITY));
+    JPanel content = new JPanel(new BorderLayout());
+    content.setBackground(Color.WHITE);
+    content.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
-    getContentPane().add(tabbedPane, BorderLayout.CENTER);
+    JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+    form.setBackground(Color.WHITE);
+
+    form.add(new JLabel("Port:"));
+    portCombo = new JComboBox<>();
+    portCombo.setPrototypeDisplayValue("COM99 (Descriptive Port Name)");
+    refreshPorts();
+    form.add(portCombo);
+
+    testRuskaButton = new JButton("Test Ruska");
+    testRuskaButton.addActionListener(e -> onTestRuska());
+    form.add(testRuskaButton);
+
+    testAlmemoButton = new JButton("Test Almemo");
+    testAlmemoButton.addActionListener(e -> onTestAlmemo());
+    form.add(testAlmemoButton);
+
+    content.add(form, BorderLayout.CENTER);
+
+    noPortsLabel = new JLabel(NO_PORTS_MESSAGE);
+    noPortsLabel.setForeground(Color.RED);
+    JPanel messagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 8));
+    messagePanel.setBackground(Color.WHITE);
+    messagePanel.add(noPortsLabel);
+    content.add(messagePanel, BorderLayout.SOUTH);
+
+    getContentPane().add(content);
+
+    updatePortsState();
+  }
+
+  private void refreshPorts() {
+    String selected =
+        portCombo != null && portCombo.getItemCount() > 0
+            ? (String) portCombo.getSelectedItem()
+            : null;
+    if (portCombo != null) {
+      portCombo.removeAllItems();
+    } else {
+      return;
+    }
+    SerialPort[] ports = SerialPort.getCommPorts();
+    for (SerialPort port : ports) {
+      String display = port.getSystemPortName();
+      String desc = port.getPortDescription();
+      if (desc != null && !desc.isEmpty()) {
+        display += " (" + desc + ")";
+      }
+      portCombo.addItem(display);
+    }
+    if (portCombo.getItemCount() == 0) {
+      portCombo.addItem(NO_PORTS_PLACEHOLDER);
+    } else if (selected != null) {
+      for (int i = 0; i < portCombo.getItemCount(); i++) {
+        if (selected.equals(portCombo.getItemAt(i))) {
+          portCombo.setSelectedIndex(i);
+          break;
+        }
+      }
+    }
+    if (testRuskaButton != null) {
+      updatePortsState();
+    }
+  }
+
+  private boolean hasPorts() {
+    return portCombo.getItemCount() > 0 && !NO_PORTS_PLACEHOLDER.equals(portCombo.getItemAt(0));
+  }
+
+  private void updatePortsState() {
+    boolean enabled = hasPorts();
+    testRuskaButton.setEnabled(enabled);
+    testAlmemoButton.setEnabled(enabled);
+    noPortsLabel.setVisible(!enabled);
+  }
+
+  private String getSelectedPortName() {
+    String item = (String) portCombo.getSelectedItem();
+    if (item == null || NO_PORTS_PLACEHOLDER.equals(item)) {
+      return null;
+    }
+    int paren = item.indexOf(' ');
+    return paren > 0 ? item.substring(0, paren) : item;
+  }
+
+  private void onTestRuska() {
+    openDeviceWindow(true);
+  }
+
+  private void onTestAlmemo() {
+    openDeviceWindow(false);
+  }
+
+  private void openDeviceWindow(boolean ruska) {
+    String portName = getSelectedPortName();
+    if (portName == null) {
+      JOptionPane.showMessageDialog(
+          this, "Please select a serial port.", "Serial Port Tester", JOptionPane.WARNING_MESSAGE);
+      return;
+    }
+    SerialPortTestDeviceWindow deviceWindow =
+        new SerialPortTestDeviceWindow(parent, portName, ruska);
+    deviceWindow.setVisible(true);
+  }
+
+  /** Refreshes the list of available serial ports. Call when the window is shown if needed. */
+  public void refreshPortsList() {
+    refreshPorts();
   }
 }
