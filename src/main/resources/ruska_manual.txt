@@ -1,0 +1,156 @@
+A message is the smallest quantity of data that the PPG can send or receive. A message consists of one or more words which are separated by commas and followed by a termination character that is either a carriage return (0D hex) or a line feed (0A hex).
+
+A message consisting only of a termination character is ignored by the PPG. For example, if the host sends a message to the PPG that is terminated with both a carriage return and a line feed, the PPG will process the carriage return and preceding text as a message. The line feed, however, is interpreted as having no preceding text and is ignored.
+
+The PPG’s message syntax is case insensitive. That is, messages sent to the PPG may be in either upper case or lower case.
+
+All messages transmitted from the PPG are in response to messages received from the host and will always be terminated with a carriage return (0D hex). Numeric values will be transmitted in the same format and precision as they are displayed on the front panel.
+
+The message syntax for both the RS-232 and the IEEE interface are listed in Sections 5.3.1 through 5.3.5. The column labeled ‘Message’ contains a list of the possible messages, or commands, that may be sent by the host computer to the PPG. The column labeled ‘Response’ describes the PPG’s response to those messages. The messages are divided into 5 categories which include pressure, rate, units, miscellaneous, and calibration.
+
+5.3.1 PRESSURE MESSAGES
+
+PA
+Returns ‘PA,x’ where x is the current pressure in current units in the same format and precision as displayed on the front panel (including decimal point). This value will not be affected by tare mode.
+
+PB
+Returns ‘PB,x,y’ where x is the current pressure as with the syntax ‘PA’ and y is the elapsed time in tenths of seconds (see ET, under misc. message, for a description of elapsed time).
+
+PF
+Returns ‘PF, x, y, z, v’ where x and y are as defined for PB and z is the transducer frequency and v is the transducer diode voltage.
+
+PT
+Returns ‘PT,x’ where x is the current pressure less the tare pressure in current units. This will be independent of display mode. If the PPG has not been placed in tare mode since the last time it was powered up (i.e. no tare value), then ‘PT,?’ will be returned.
+
+PS
+Returns ‘PS,x’ where x is the current pressure in current units in the same format and precision as displayed on the front panel. Will return the pressure less the tare pressure if the upper display is in tare mode.
+
+PC,x
+Turns on (x=1) or off (x=0) continuous transmission of pressure. When on the PPG will return ‘PB,x,y’ at the interval set by the PI message (see PB and PI syntax). If the interval is shorter than the acquisition interval, then the PPG will return every pressure value at the interval it is acquired.
+
+PC
+Returns ‘PC,1’ if the continuous pressure transmission is enabled or ‘PC,0’ if disabled.
+
+PI,x
+Sets the continuous pressure transmission interval to x tenths of seconds. x can be any number from 1 to 999 giving an interval from 0.1 to 99.9 seconds. The default interval will be 1 second.
+
+PI
+Returns ‘PI,x’ where x is the current value of PI.
+
+DP,x
+Sets the number of digits after the decimal point in the pressure reading to x.
+
+CLD,x
+Turns the pressure display on (x = 1) or off (x = 0).
+
+5.3.2 RATE MESSAGES
+
+Message Response
+
+RS
+Returns ‘RS,x’ or ‘RM,x’ where x is the latest rate value in the current units for the selected rate period (/min or /sec). Will return ‘RS,x’ if rate period is per/second and will return ‘RM,x’ if rate period is per/minute. Will not affect display mode. The rate period will be the last selected rate period if not displaying rate.
+
+RC,x
+Turns on (x=1) or off (x=0) continuous transmission of rate. When on the PPG will return ‘RS,x’ or ‘RM,x’ (see RS above) at the interval set by the RI message. If the interval is shorter than the acquisition interval, then the PPG will return every rate value at the interval the pressure is acquired.
+
+RC
+Returns ‘RC,1’ if the continuous rate transmission is enabled or ‘RC,0’ if disabled.
+
+RI,x
+Sets the continuous rate transmission interval to x tenths of seconds. x can be any number from 1 to 999 giving an interval from 0.1 to 99.9 seconds. The default interval will be 1 second.
+
+RI
+Returns ‘RI,x’ where x is the current value of RI.
+
+RP,x
+Sets the rate period as seconds (x=0) or minutes (x=1).
+
+RP
+Returns ‘RP,x’ where x is the current value of RP.
+
+RO,x
+Turns rate display on (x=1) or off (x=0). If the lower display is in tare mode, ‘RO,1’ will turn tare mode off and rate display on, but ‘RO,0’ will only turn the lower display off if it was in rate mode.
+
+RO
+Returns ‘RO,x’ where x is the current value of RO.
+
+5.3.3 UNIT MESSAGES
+
+UN,x
+Sets the current units to x according to the table below. Units cannot be changed in the calibration mode.
+
+x      Units
+0      inHg
+1      psi
+2      mbar
+3      kPa
+4      mmHg
+5      inH2O
+6      mmH2O
+7      kg/cm²
+8      feet
+9      meters
+10     psf (pounds per square foot)
+11     usr1 (user defined unit 1)
+12     usr2 (user defined unit 2)
+13     usr3 (user defined unit 3)
+14     usr4 (user defined unit 4)
+
+UN
+Returns ‘UN,x’ where x is the value of UN.
+
+UD,x,y,z
+Sets the user defined units where x is 1 to 4 for the 4 user defined units, y is the conversion constant that is to be multiplied by kPa, and z is the 4 character units code abbreviation for the front panel display. z can be less than 4 characters and will be truncated if more than 4 characters.
+
+UD,x
+Returns UD,x,y,z where x, y and z are as defined above.
+
+5.3.4. MISC MESSAGES
+
+ET,x
+Sets the elapsed time to x. The elapsed time is an internal timer that is incremented every one tenth of a second. It is set to 0 when power is first turned on. After 24 hours (ET = 864000) the timer is reset back to 0.
+
+ET
+Returns ‘ET,x’ where x is the elapsed time in tenths of seconds since the elapsed time clock was started.
+
+TM,x
+Sets tare mode as follows.
+
+x=0
+Turns tare display off (lower or upper display).
+
+x=1
+Puts upper display in tare mode. Turns lower display off if it was in tare mode. Sets tare pressure equal to current pressure.
+
+x=2
+Puts lower display in tare mode. Puts upper display in normal mode if it was in tare mode. Sets tare pressure equal to current pressure.
+
+TM
+Returns ‘TM,x’ where x is as defined above.
+
+ER
+Returns ‘ER,x’ where x is the error code from the error code buffer. See Section 5.3.6 for list of error codes.
+
+ST
+Puts the upper display in test mode and performs a self test. Clears error buffer and inserts test result(s). Returns ‘ST,x’ where x is the first test result as defined for error codes (Section 5.3.6). User must use ER message to read additional results if any.
+
+XB
+Returns XB,x where x is the battery voltage.
+
+V1
+Returns V1,x where x is the version of main board software.
+
+V2
+Returns V2,x where x is the version of front panel software. Returns V2,0.00 if there is no front panel.
+
+ECHO,x
+Turns echo mode on (x=1) or off (x=0). Will be off by default.
+
+ECHO
+Returns ECHO,x where x is 1 if echo mode is on and 0 if echo mode is off.
+
+MD,x
+Sets the pressure medium to N₂ (x=1) or Air (x=0).
+
+MD
+Returns the value for MD.
