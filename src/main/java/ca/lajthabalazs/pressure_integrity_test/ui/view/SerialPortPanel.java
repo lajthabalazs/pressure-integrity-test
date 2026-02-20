@@ -45,6 +45,22 @@ public class SerialPortPanel extends JPanel {
   private SerialPortHandle openPort;
 
   private final String portName;
+  private ConnectionListener connectionListener;
+
+  /** Notified when a connection is successfully established. */
+  public interface ConnectionListener {
+    void connected(SerialPortHandle handle);
+  }
+
+  /** Set a listener to be notified when Connect succeeds. */
+  public void setConnectionListener(ConnectionListener connectionListener) {
+    this.connectionListener = connectionListener;
+  }
+
+  /** The currently open port, or null if not connected. */
+  public SerialPortHandle getOpenPort() {
+    return openPort;
+  }
 
   /**
    * Creates a serial port panel with the given parameter sets. Each array must have at least one
@@ -270,6 +286,9 @@ public class SerialPortPanel extends JPanel {
     boolean opened = handle.openPort();
     if (opened) {
       openPort = handle;
+      if (connectionListener != null) {
+        connectionListener.connected(handle);
+      }
       JOptionPane.showMessageDialog(
           this, "Connected to " + portName + ".", "Connect", JOptionPane.INFORMATION_MESSAGE);
     } else {
