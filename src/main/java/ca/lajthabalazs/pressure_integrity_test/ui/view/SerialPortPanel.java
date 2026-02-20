@@ -1,6 +1,5 @@
 package ca.lajthabalazs.pressure_integrity_test.ui.view;
 
-import ca.lajthabalazs.pressure_integrity_test.serial.PortDescriptor;
 import ca.lajthabalazs.pressure_integrity_test.serial.SerialPortHandle;
 import ca.lajthabalazs.pressure_integrity_test.serial.SerialPorts;
 import com.fazecast.jSerialComm.SerialPort;
@@ -56,13 +55,13 @@ public class SerialPortPanel extends JPanel {
    * SerialPort#TWO_STOP_BITS}.
    */
   public SerialPortPanel(
-          String portName,
-          int[] supportedBaudRates,
-          int[] dataBitsPerWord,
-          int[] supportedNumberOfStopBits,
-          int[] supportedParity) {
-      this.portName = portName;
-      if (supportedBaudRates == null || supportedBaudRates.length == 0) {
+      String portName,
+      int[] supportedBaudRates,
+      int[] dataBitsPerWord,
+      int[] supportedNumberOfStopBits,
+      int[] supportedParity) {
+    this.portName = portName;
+    if (supportedBaudRates == null || supportedBaudRates.length == 0) {
       throw new IllegalArgumentException("supportedBaudRates must not be null or empty");
     }
     if (dataBitsPerWord == null || dataBitsPerWord.length == 0) {
@@ -90,9 +89,6 @@ public class SerialPortPanel extends JPanel {
   private JPanel createHeader() {
     JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
     row.setBackground(Color.WHITE);
-    row.add(new JLabel("Port:"));
-    row.add(Box.createHorizontalStrut(6));
-    row.add(Box.createHorizontalStrut(14));
     if (this.supportedBaudRates.length > 1) {
       row.add(new JLabel("Baud:"));
       row.add(Box.createHorizontalStrut(6));
@@ -218,8 +214,6 @@ public class SerialPortPanel extends JPanel {
       default -> String.valueOf(stopBits);
     };
   }
-
-
 
   private int getSelectedBaudRate() {
     if (supportedBaudRates.length == 1) {
