@@ -35,11 +35,8 @@ public class SerialPortTestDeviceWindow extends JFrame {
 
     SerialPortPanel panel =
         ruska
-            ? new SerialPortPanel(RUSKA_BAUD, RUSKA_DATA_BITS, RUSKA_STOP_BITS, RUSKA_PARITY)
-            : new SerialPortPanel(ALMEMO_BAUD, ALMEMO_DATA_BITS, ALMEMO_STOP_BITS, ALMEMO_PARITY);
-    panel.refreshPorts();
-    panel.setSelectedPort(portName);
-
+            ? new SerialPortPanel(portName, RUSKA_BAUD, RUSKA_DATA_BITS, RUSKA_STOP_BITS, RUSKA_PARITY)
+            : new SerialPortPanel(portName, ALMEMO_BAUD, ALMEMO_DATA_BITS, ALMEMO_STOP_BITS, ALMEMO_PARITY);
     getContentPane().add(panel);
   }
 }

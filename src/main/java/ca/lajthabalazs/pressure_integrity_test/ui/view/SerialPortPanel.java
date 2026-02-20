@@ -34,7 +34,6 @@ public class SerialPortPanel extends JPanel {
   private final int[] supportedNumberOfStopBits;
   private final int[] supportedParity;
 
-  private JComboBox<String> portCombo;
   private JComboBox<String> baudCombo;
   private int[] baudValues;
   private JComboBox<String> dataBitsCombo;
@@ -46,6 +45,8 @@ public class SerialPortPanel extends JPanel {
 
   private SerialPortHandle openPort;
 
+  private final String portName;
+
   /**
    * Creates a serial port panel with the given parameter sets. Each array must have at least one
    * element; otherwise {@link IllegalArgumentException} is thrown. Parity values must be {@link
@@ -55,11 +56,13 @@ public class SerialPortPanel extends JPanel {
    * SerialPort#TWO_STOP_BITS}.
    */
   public SerialPortPanel(
-      int[] supportedBaudRates,
-      int[] dataBitsPerWord,
-      int[] supportedNumberOfStopBits,
-      int[] supportedParity) {
-    if (supportedBaudRates == null || supportedBaudRates.length == 0) {
+          String portName,
+          int[] supportedBaudRates,
+          int[] dataBitsPerWord,
+          int[] supportedNumberOfStopBits,
+          int[] supportedParity) {
+      this.portName = portName;
+      if (supportedBaudRates == null || supportedBaudRates.length == 0) {
       throw new IllegalArgumentException("supportedBaudRates must not be null or empty");
     }
     if (dataBitsPerWord == null || dataBitsPerWord.length == 0) {
@@ -89,15 +92,6 @@ public class SerialPortPanel extends JPanel {
     row.setBackground(Color.WHITE);
     row.add(new JLabel("Port:"));
     row.add(Box.createHorizontalStrut(6));
-    portCombo = new JComboBox<>();
-    portCombo.setPrototypeDisplayValue("COM99 (Descriptive Port Name)");
-    portCombo.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UNDERLINE_COLOR));
-    portCombo.setRenderer(createCenterRenderer());
-    int portHeight = portCombo.getPreferredSize().height;
-    portCombo.setPreferredSize(new Dimension(100, portHeight));
-    portCombo.setMaximumSize(new Dimension(400, portHeight));
-    refreshPorts();
-    row.add(portCombo);
     row.add(Box.createHorizontalStrut(14));
     if (this.supportedBaudRates.length > 1) {
       row.add(new JLabel("Baud:"));
@@ -225,53 +219,7 @@ public class SerialPortPanel extends JPanel {
     };
   }
 
-  /**
-   * Sets the selected port by system port name (e.g. "COM3"). Call after {@link #refreshPorts()} if
-   * needed. No-op if the port is not in the list.
-   */
-  public void setSelectedPort(String portName) {
-    if (portName == null) return;
-    for (int i = 0; i < portCombo.getItemCount(); i++) {
-      String item = portCombo.getItemAt(i);
-      if (item != null && (item.equals(portName) || item.startsWith(portName + " "))) {
-        portCombo.setSelectedIndex(i);
-        return;
-      }
-    }
-  }
 
-  /** Refreshes the list of available serial ports in the dropdown. */
-  public void refreshPorts() {
-    String selected = portCombo.getItemCount() > 0 ? (String) portCombo.getSelectedItem() : null;
-    portCombo.removeAllItems();
-    for (PortDescriptor desc : SerialPorts.getAvailablePorts()) {
-      portCombo.addItem(desc.toDisplayString());
-    }
-    if (portCombo.getItemCount() == 0) {
-      portCombo.addItem(NO_PORTS_PLACEHOLDER);
-    }
-    portCombo.addItem(DEMO_PORT);
-    if (selected != null) {
-      for (int i = 0; i < portCombo.getItemCount(); i++) {
-        if (selected.equals(portCombo.getItemAt(i))) {
-          portCombo.setSelectedIndex(i);
-          break;
-        }
-      }
-    }
-  }
-
-  private String getSelectedPortName() {
-    String item = (String) portCombo.getSelectedItem();
-    if (item == null || NO_PORTS_PLACEHOLDER.equals(item)) {
-      return null;
-    }
-    if (DEMO_PORT.equals(item)) {
-      return DEMO_PORT;
-    }
-    int paren = item.indexOf(' ');
-    return paren > 0 ? item.substring(0, paren) : item;
-  }
 
   private int getSelectedBaudRate() {
     if (supportedBaudRates.length == 1) {
@@ -304,12 +252,6 @@ public class SerialPortPanel extends JPanel {
   private static final String DEMO_PORT = "DemoPort";
 
   private void onConnect() {
-    String portName = getSelectedPortName();
-    if (portName == null) {
-      JOptionPane.showMessageDialog(
-          this, "Please select a serial port.", "Connect", JOptionPane.WARNING_MESSAGE);
-      return;
-    }
     if (openPort != null && openPort.isOpen()) {
       JOptionPane.showMessageDialog(
           this,

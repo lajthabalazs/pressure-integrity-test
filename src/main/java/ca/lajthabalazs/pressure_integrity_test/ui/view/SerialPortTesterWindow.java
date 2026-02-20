@@ -25,10 +25,10 @@ public class SerialPortTesterWindow extends JFrame {
   private static final String DEMO_PORT = "DemoPort";
 
   private final Frame parent;
-  private JComboBox<String> portCombo;
-  private JButton testRuskaButton;
-  private JButton testAlmemoButton;
-  private JLabel noPortsLabel;
+  private final JComboBox<String> portCombo;
+  private final JButton testRuskaButton;
+  private final JButton testAlmemoButton;
+  private final JLabel noPortsLabel;
 
   public SerialPortTesterWindow(Frame parent) {
     super("Serial Port Tester");
@@ -150,8 +150,4 @@ public class SerialPortTesterWindow extends JFrame {
     deviceWindow.setVisible(true);
   }
 
-  /** Refreshes the list of available serial ports. Call when the window is shown if needed. */
-  public void refreshPortsList() {
-    refreshPorts();
-  }
 }
