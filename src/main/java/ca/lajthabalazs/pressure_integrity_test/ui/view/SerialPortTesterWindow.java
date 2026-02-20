@@ -1,6 +1,7 @@
 package ca.lajthabalazs.pressure_integrity_test.ui.view;
 
-import com.fazecast.jSerialComm.SerialPort;
+import ca.lajthabalazs.pressure_integrity_test.serial.PortDescriptor;
+import ca.lajthabalazs.pressure_integrity_test.serial.SerialPorts;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -85,14 +86,8 @@ public class SerialPortTesterWindow extends JFrame {
     } else {
       return;
     }
-    SerialPort[] ports = SerialPort.getCommPorts();
-    for (SerialPort port : ports) {
-      String display = port.getSystemPortName();
-      String desc = port.getPortDescription();
-      if (desc != null && !desc.isEmpty()) {
-        display += " (" + desc + ")";
-      }
-      portCombo.addItem(display);
+    for (PortDescriptor desc : SerialPorts.getAvailablePorts()) {
+      portCombo.addItem(desc.toDisplayString());
     }
     if (portCombo.getItemCount() == 0) {
       portCombo.addItem(NO_PORTS_PLACEHOLDER);

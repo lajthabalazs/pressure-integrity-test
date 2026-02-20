@@ -1,5 +1,8 @@
 package ca.lajthabalazs.pressure_integrity_test.ui.view;
 
+import ca.lajthabalazs.pressure_integrity_test.serial.PortDescriptor;
+import ca.lajthabalazs.pressure_integrity_test.serial.SerialPortHandle;
+import ca.lajthabalazs.pressure_integrity_test.serial.SerialPorts;
 import com.fazecast.jSerialComm.SerialPort;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -41,7 +44,7 @@ public class SerialPortPanel extends JPanel {
   private JComboBox<String> parityCombo;
   private int[] parityValues;
 
-  private SerialPort openPort;
+  private SerialPortHandle openPort;
 
   /**
    * Creates a serial port panel with the given parameter sets. Each array must have at least one
@@ -241,14 +244,8 @@ public class SerialPortPanel extends JPanel {
   public void refreshPorts() {
     String selected = portCombo.getItemCount() > 0 ? (String) portCombo.getSelectedItem() : null;
     portCombo.removeAllItems();
-    SerialPort[] ports = SerialPort.getCommPorts();
-    for (SerialPort port : ports) {
-      String display = port.getSystemPortName();
-      String desc = port.getPortDescription();
-      if (desc != null && !desc.isEmpty()) {
-        display += " (" + desc + ")";
-      }
-      portCombo.addItem(display);
+    for (PortDescriptor desc : SerialPorts.getAvailablePorts()) {
+      portCombo.addItem(desc.toDisplayString());
     }
     if (portCombo.getItemCount() == 0) {
       portCombo.addItem(NO_PORTS_PLACEHOLDER);
@@ -313,11 +310,6 @@ public class SerialPortPanel extends JPanel {
           this, "Please select a serial port.", "Connect", JOptionPane.WARNING_MESSAGE);
       return;
     }
-    if (DEMO_PORT.equals(portName)) {
-      JOptionPane.showMessageDialog(
-          this, "Demo mode – no connection made.", "Connect", JOptionPane.INFORMATION_MESSAGE);
-      return;
-    }
     if (openPort != null && openPort.isOpen()) {
       JOptionPane.showMessageDialog(
           this,
@@ -327,9 +319,9 @@ public class SerialPortPanel extends JPanel {
       return;
     }
 
-    SerialPort port = SerialPort.getCommPort(portName);
+    SerialPortHandle handle = SerialPorts.getHandle(portName);
     boolean paramsOk =
-        port.setComPortParameters(
+        handle.setComPortParameters(
             getSelectedBaudRate(),
             getSelectedDataBits(),
             getSelectedStopBits(),
@@ -339,9 +331,9 @@ public class SerialPortPanel extends JPanel {
           this, "Failed to set port parameters.", "Connect", JOptionPane.ERROR_MESSAGE);
       return;
     }
-    boolean opened = port.openPort();
+    boolean opened = handle.openPort();
     if (opened) {
-      openPort = port;
+      openPort = handle;
       JOptionPane.showMessageDialog(
           this, "Connected to " + portName + ".", "Connect", JOptionPane.INFORMATION_MESSAGE);
     } else {
