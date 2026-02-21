@@ -150,5 +150,6 @@ public class SerialPortTesterWindow extends JFrame {
     SerialPortTestDeviceWindow deviceWindow =
         new SerialPortTestDeviceWindow(parent, portName, ruska);
     deviceWindow.setVisible(true);
+    dispose();
   }
 }

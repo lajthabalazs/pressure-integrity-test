@@ -83,7 +83,8 @@ tasks.jacocoTestReport {
                     "ca/lajthabalazs/pressure_integrity_test/ui/**",
                     "ca/lajthabalazs/pressure_integrity_test/io/**",
                     "ca/lajthabalazs/pressure_integrity_test/serial/**",
-                    "**/RuskaReadCommands.class"
+                    "**/RuskaReadCommands.class",
+                    "**/AlmemoCommands.class"
                 )
             }
         }
@@ -100,7 +101,8 @@ tasks.jacocoTestCoverageVerification {
                     "ca/lajthabalazs/pressure_integrity_test/ui/**",
                     "ca/lajthabalazs/pressure_integrity_test/io/**",
                     "ca/lajthabalazs/pressure_integrity_test/serial/**",
-                    "**/RuskaReadCommands.class"
+                    "**/RuskaReadCommands.class",
+                    "**/AlmemoCommands.class"
                 )
             }
         }

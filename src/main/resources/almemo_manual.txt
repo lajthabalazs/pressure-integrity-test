@@ -1,0 +1,66 @@
+Almemo (Ahlborn) device commands
+================================
+
+This document describes the Almemo commands supported for device selection, configuration,
+measurements, and cycle control. Parameters are sent as specified (e.g. two-digit strings
+without separating characters where noted).
+
+
+Device selection
+----------------
+
+G<nn>   Select device
+        Parameter: string in the form of two numeric digits, e.g. 00, 01, 15.
+        The parameter must be sent without any separating characters.
+        Examples: G00, G01, G15, G99.
+
+
+Overview and configuration
+--------------------------
+
+P15     Fetch an overview of the entire setting of the device and the connected sensors.
+
+P19     Fetch an overview of the current device configuration, settings and output modules.
+
+
+Date and time
+-------------
+
+P13     Fetch date.
+
+P10     Fetch time.
+
+P46     Fetch measurement time.
+
+
+Measuring point selection
+-------------------------
+
+M<nn>   Select measuring point.
+        Parameter: two-character string that represents a number, e.g. M00, M01, M95.
+        Same format as device selection (two digits, no separator).
+        Examples: M00, M01, M95.
+
+
+Measured values (for selected measuring point)
+----------------------------------------------
+
+P01     Outputs measured value for the selected measuring point.
+
+P02     Outputs max value for the selected measuring point.
+
+P03     Outputs min value for the selected measuring point.
+
+P18     Outputs measured value list (last, min, max, average, ...).
+
+
+Cycle control
+-------------
+
+S1      Outputs all measurements in a cycle.
+
+S2      Start cycle without output of the header.
+
+S3      Start cycle with output of the header.
+
+X       Stop cycle.

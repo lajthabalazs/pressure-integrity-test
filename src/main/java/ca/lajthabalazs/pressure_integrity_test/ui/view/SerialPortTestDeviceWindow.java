@@ -1,5 +1,6 @@
 package ca.lajthabalazs.pressure_integrity_test.ui.view;
 
+import ca.lajthabalazs.pressure_integrity_test.command.AlmemoCommands;
 import ca.lajthabalazs.pressure_integrity_test.command.Command;
 import ca.lajthabalazs.pressure_integrity_test.command.RuskaReadCommands;
 import com.fazecast.jSerialComm.SerialPort;
@@ -53,7 +54,7 @@ public class SerialPortTestDeviceWindow extends JFrame {
     main.add(centerPlaceholder, BorderLayout.CENTER);
     getContentPane().add(main);
 
-    List<Command> commands = ruska ? RuskaReadCommands.ALL : List.of();
+    List<Command> commands = ruska ? RuskaReadCommands.ALL : AlmemoCommands.ALL;
 
     serialPanel.setConnectionListener(
         handle -> {

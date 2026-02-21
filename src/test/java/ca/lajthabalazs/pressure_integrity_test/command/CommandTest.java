@@ -56,6 +56,16 @@ class CommandTest {
   }
 
   @Test
+  void buildMessage_almemoCommand_oneParameter_returnsIdPlusValue() {
+    Command cmd =
+        new AlmemoCommand("G", "Select device", "desc", List.of(new TwoDigitStringParameter()));
+    assertEquals(Optional.of("G00"), cmd.buildMessage(List.of("00")));
+    assertEquals(Optional.of("G99"), cmd.buildMessage(List.of("99")));
+    assertTrue(cmd.buildMessage(List.of("9")).isEmpty());
+    assertTrue(cmd.buildMessage(List.of("123")).isEmpty());
+  }
+
+  @Test
   void getId_getName_getDescription_getParameters() {
     List<Parameter> params = List.of(new IntParameter(1, 4));
     Command cmd = new Command("UD", "User unit", "Description here", params);
@@ -64,5 +74,18 @@ class CommandTest {
     assertEquals("Description here", cmd.getDescription());
     assertEquals(1, cmd.getParameters().size());
     assertFalse(cmd.getParameters().isEmpty());
+  }
+
+  @Test
+  void getDisplayName_returnsIdDashName() {
+    Command cmd = new Command("PA", "Pressure", "desc", List.of());
+    assertEquals("PA - Pressure", cmd.getDisplayName());
+  }
+
+  @Test
+  void getDisplayName_withParameterCommand_returnsIdDashName() {
+    Command cmd =
+        new Command("P15", "Device and sensors overview", "desc", List.of(new IntParameter(1, 4)));
+    assertEquals("P15 - Device and sensors overview", cmd.getDisplayName());
   }
 }

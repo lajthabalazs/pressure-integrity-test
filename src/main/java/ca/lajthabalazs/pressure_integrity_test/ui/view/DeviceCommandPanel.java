@@ -83,7 +83,7 @@ public class DeviceCommandPanel extends JPanel {
     }
     commandCombo.setRenderer(
         (list, value, index, isSelected, cellHasFocus) -> {
-          JLabel l = new JLabel(value == null ? "" : value.getName());
+          JLabel l = new JLabel(value == null ? "" : value.getDisplayName());
           if (isSelected) {
             l.setBackground(list.getSelectionBackground());
             l.setForeground(list.getSelectionForeground());

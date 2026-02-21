@@ -29,6 +29,14 @@ public class Command {
     return name;
   }
 
+  /**
+   * Label for UI (e.g. command dropdown): command id and name, e.g. "P15 - Device and sensors
+   * overview".
+   */
+  public String getDisplayName() {
+    return id + " - " + name;
+  }
+
   /** Optional longer description (e.g. from device manual). */
   public String getDescription() {
     return description;
